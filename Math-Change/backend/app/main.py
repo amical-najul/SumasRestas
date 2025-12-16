@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Body
+from fastapi import FastAPI, HTTPException, Body, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from typing import List, Optional
 import os
@@ -6,9 +6,9 @@ from dotenv import load_dotenv
 from supabase import create_client, Client
 from pydantic import BaseModel
 from .models import User, UserCreate, UserLogin, ScoreRecord
-from .models import User, UserCreate, UserLogin, ScoreRecord
+
 from .database import supabase
-from .auth import verify_password, get_password_hash, create_access_token, ACCESS_TOKEN_EXPIRE_MINUTES
+from .auth import verify_password, get_password_hash, create_access_token, ACCESS_TOKEN_EXPIRE_MINUTES, get_current_user, get_admin_user
 from datetime import datetime, timedelta
 import uuid
 
@@ -125,12 +125,12 @@ def register(user: UserCreate):
         return {"success": False, "message": f"Database error: {str(e)}"}
 
 @app.get("/users")
-def get_all_users():
+def get_all_users(admin_user: dict = Depends(get_admin_user)):
     res = supabase.table("users").select("*").execute()
     return res.data
 
 @app.post("/users")
-def save_user(user: dict = Body(...)):
+def save_user(user: dict = Body(...), current_user: dict = Depends(get_current_user)):
     # Upsert logic
     # If ID exists, update. If not, insert? Frontend sends full object.
     # Usually used for updating settings or level.
@@ -155,7 +155,7 @@ def get_scores(user: Optional[str] = None):
     return res.data
 
 @app.post("/scores")
-def save_score(record: ScoreRecord):
+def save_score(record: ScoreRecord, current_user: dict = Depends(get_current_user)):
     data = record.dict()
     if not data.get("id"):
         data["id"] = str(uuid.uuid4())

@@ -9,7 +9,7 @@ import StudyTablesScreen from './components/StudyTablesScreen';
 import LoginScreen from './components/LoginScreen';
 import ProfileScreen from './components/ProfileScreen';
 import AdminPanel from './components/AdminPanel';
-import { saveScore, saveUser, getSession } from './services/storageService';
+import { saveScore, saveUser, getSession, clearSession } from './services/storageService';
 
 const App: React.FC = () => {
   // Start at LOGIN screen
@@ -34,7 +34,7 @@ const App: React.FC = () => {
   }, []);
 
   // Difficulty Mapping for Progression
-  const difficultyOrder: Difficulty[] = ['easy', 'easy_medium', 'medium', 'medium_hard', 'hard'];
+  const difficultyOrder: Difficulty[] = ['easy', 'easy_medium', 'medium', 'medium_hard', 'hard', 'random_tables'];
 
   // --- AUTH HANDLERS ---
   const handleLoginSuccess = (user: User) => {
@@ -50,6 +50,7 @@ const App: React.FC = () => {
   };
 
   const handleLogout = () => {
+    clearSession();
     setCurrentUser(null);
     setUsername('');
     setScreen(GameScreenState.LOGIN);
@@ -140,7 +141,8 @@ const App: React.FC = () => {
   // Helper to determine if next level button should show
   const currentDiffIndex = difficultyOrder.indexOf(difficulty);
   const hasNextLevel = category !== 'challenge' && currentDiffIndex !== -1 && currentDiffIndex < difficultyOrder.length - 1;
-  const lastScore = gameStats ? (gameStats.correct / (gameStats.correct + gameStats.incorrect)) * 100 : 0;
+  const totalQ = gameStats ? gameStats.correct + gameStats.incorrect : 0;
+  const lastScore = gameStats && totalQ > 0 ? (gameStats.correct / totalQ) * 100 : 0;
   const isPass = lastScore >= 60;
 
   return (
@@ -215,7 +217,7 @@ const App: React.FC = () => {
           />
         )}
 
-        {screen === GameScreenState.ADMIN_PANEL && (
+        {screen === GameScreenState.ADMIN_PANEL && currentUser?.role === 'ADMIN' && (
           <AdminPanel
             onBack={() => setScreen(GameScreenState.WELCOME)}
           />

@@ -15,28 +15,60 @@ const LoginScreen: React.FC<Props> = ({ onLoginSuccess, onGuestPlay }) => {
   const [password, setPassword] = useState('');
   const [username, setUsername] = useState('');
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+
+  const validateEmail = (email: string) => {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
+    if (isLoading) return;
+
     if (isLogin) {
-      const result = await loginUser(email, password);
-      if (result.success && result.user) {
-        onLoginSuccess(result.user);
-      } else {
-        setError(result.message || 'Error al iniciar sesión');
-      }
-    } else {
-      if (!username.trim()) {
-        setError('El nombre de usuario es obligatorio');
+      if (!email.trim() || !password.trim()) {
+        setError('Por favor completa todos los campos');
         return;
       }
-      const result = await registerUser(username, email, password);
-      if (result.success && result.user) {
-        onLoginSuccess(result.user);
-      } else {
-        setError(result.message || 'Error al registrarse');
+
+      setIsLoading(true);
+      try {
+        const result = await loginUser(email, password);
+        if (result.success && result.user) {
+          onLoginSuccess(result.user);
+        } else {
+          setError(result.message || 'Error al iniciar sesión');
+        }
+      } catch (err) {
+        setError('Error de conexión');
+      } finally {
+        setIsLoading(false);
+      }
+    } else {
+      if (!username.trim() || !email.trim() || !password.trim()) {
+        setError('Todos los campos son obligatorios');
+        return;
+      }
+
+      if (!validateEmail(email)) {
+        setError('Por favor ingresa un correo electrónico válido');
+        return;
+      }
+
+      setIsLoading(true);
+      try {
+        const result = await registerUser(username, email, password);
+        if (result.success && result.user) {
+          onLoginSuccess(result.user);
+        } else {
+          setError(result.message || 'Error al registrarse');
+        }
+      } catch (err) {
+        setError('Error de conexión');
+      } finally {
+        setIsLoading(false);
       }
     }
   };
@@ -96,10 +128,12 @@ const LoginScreen: React.FC<Props> = ({ onLoginSuccess, onGuestPlay }) => {
 
           <button
             type="submit"
+            disabled={isLoading}
             className={`w-full py-3 rounded-xl font-bold text-white shadow-lg transition-all transform hover:scale-[1.02] flex items-center justify-center gap-2
-              ${isLogin ? 'bg-blue-600 hover:bg-blue-500 shadow-blue-500/20' : 'bg-purple-600 hover:bg-purple-500 shadow-purple-500/20'}`}
+              ${isLogin ? 'bg-blue-600 hover:bg-blue-500 shadow-blue-500/20' : 'bg-purple-600 hover:bg-purple-500 shadow-purple-500/20'}
+              ${isLoading ? 'opacity-70 cursor-not-allowed' : ''}`}
           >
-            {isLogin ? 'Entrar' : 'Registrarse'} <ArrowRight size={18} />
+            {isLoading ? 'Procesando...' : (isLogin ? 'Entrar' : 'Registrarse')} {!isLoading && <ArrowRight size={18} />}
           </button>
         </form>
 
@@ -107,7 +141,21 @@ const LoginScreen: React.FC<Props> = ({ onLoginSuccess, onGuestPlay }) => {
           <p className="text-sm text-gray-400">
             {isLogin ? '¿No tienes cuenta?' : '¿Ya tienes cuenta?'}
             <button
-              onClick={() => { setIsLogin(!isLogin); setError(''); }}
+              onClick={() => {
+                setIsLogin(!isLogin);
+                setError('');
+                if (!isLogin) {
+                  // Switching TO login, clear everything or keep email? Let's clear for cleaner state as requested
+                  setUsername('');
+                  // setEmail(''); // Optional depending on UX, usually people like email kept. Plan said clear all.
+                  // setPassword('');
+                } else {
+                  // Switching TO register
+                  setUsername('');
+                  setEmail('');
+                  setPassword('');
+                }
+              }}
               className="ml-2 text-blue-400 hover:text-blue-300 font-semibold hover:underline"
             >
               {isLogin ? 'Regístrate' : 'Inicia Sesión'}
