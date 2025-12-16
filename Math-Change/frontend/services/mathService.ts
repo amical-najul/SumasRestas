@@ -10,12 +10,12 @@ const getOperation = (): '+' | '-' => {
 };
 
 export const calculateTimeLimit = (
-  attempt: number, 
-  difficulty: Difficulty, 
+  attempt: number,
+  difficulty: Difficulty,
   category: GameCategory,
   userSettings?: UserSettings
 ): number => {
-  
+
   // 1. Priority: User Custom Settings (if defined for this difficulty)
   if (userSettings?.customTimers && userSettings.customTimers[difficulty]) {
     const customTime = userSettings.customTimers[difficulty];
@@ -25,7 +25,7 @@ export const calculateTimeLimit = (
   // 2. Challenge mode dynamic time (Overrides custom settings usually, but we keep logic separate)
   if (category === 'challenge') {
     // Starts with 10s, adds 1s every 10 levels, capped at 15s
-    return Math.min(15, 10 + Math.floor(attempt / 10)); 
+    return Math.min(15, 10 + Math.floor(attempt / 10));
   }
 
   // 3. Default Time Logic
@@ -35,13 +35,13 @@ export const calculateTimeLimit = (
     case 'medium': return 14;
     case 'medium_hard': return 16;
     case 'hard': return 18;
-    case 'random_tables': return 12; 
+    case 'random_tables': return 12;
     default: return 14;
   }
 };
 
 export const generateQuestion = (attempt: number, category: GameCategory, difficulty: Difficulty = 'medium'): Question => {
-  
+
   // --- CHALLENGE MODE LOGIC (Recursive) ---
   if (category === 'challenge') {
     let subCategory: GameCategory = 'addition';
@@ -141,7 +141,7 @@ export const generateQuestion = (attempt: number, category: GameCategory, diffic
       }
       case 'medium_hard': { // 2 digits - 2 digits (simple)
         const a = getRandomInt(30, 99);
-        const b = getRandomInt(10, 25);
+        const b = getRandomInt(10, Math.min(25, a - 1));
         return { text: `${a} - ${b}`, answer: a - b };
       }
       case 'hard': { // 2 digits - 2 digits (complex)
@@ -192,31 +192,31 @@ export const generateQuestion = (attempt: number, category: GameCategory, diffic
   if (category === 'division') {
     // Generate multiplication and flip it
     switch (difficulty) {
-      case 'easy': { 
+      case 'easy': {
         const divisor = getRandomInt(2, 3);
         const quotient = getRandomInt(2, 5);
         const dividend = divisor * quotient;
         return { text: `${dividend} ÷ ${divisor}`, answer: quotient };
       }
-      case 'easy_medium': { 
+      case 'easy_medium': {
         const divisor = getRandomInt(2, 5);
         const quotient = getRandomInt(2, 10);
         const dividend = divisor * quotient;
         return { text: `${dividend} ÷ ${divisor}`, answer: quotient };
       }
-      case 'medium': { 
+      case 'medium': {
         const divisor = getRandomInt(3, 9);
         const quotient = getRandomInt(3, 9);
         const dividend = divisor * quotient;
         return { text: `${dividend} ÷ ${divisor}`, answer: quotient };
       }
-      case 'medium_hard': { 
+      case 'medium_hard': {
         const divisor = getRandomInt(4, 12);
         const quotient = getRandomInt(4, 12);
         const dividend = divisor * quotient;
         return { text: `${dividend} ÷ ${divisor}`, answer: quotient };
       }
-      case 'hard': { 
+      case 'hard': {
         const divisor = getRandomInt(5, 15);
         const quotient = getRandomInt(5, 20);
         const dividend = divisor * quotient;
@@ -252,10 +252,10 @@ export const generateQuestion = (attempt: number, category: GameCategory, diffic
 
       if (op2 === '+') ans = intermediate + c;
       else ans = intermediate - c;
-      
+
       text = `${a} ${op1} ${b} ${op2} ${c}`;
-      
-      if (difficulty === 'easy' && intermediate < 0) ans = -1; 
+
+      if (difficulty === 'easy' && intermediate < 0) ans = -1;
     }
     return { text, answer: ans };
   }
@@ -264,19 +264,19 @@ export const generateQuestion = (attempt: number, category: GameCategory, diffic
   if (category === 'mixed_mult_add') {
     let a, b, c, ans;
     const op = getOperation();
-    
+
     if (difficulty === 'easy' || difficulty === 'easy_medium') {
-       a = getRandomInt(1, 5);
-       b = getRandomInt(1, 5);
-       c = getRandomInt(1, 10);
+      a = getRandomInt(1, 5);
+      b = getRandomInt(1, 5);
+      c = getRandomInt(1, 10);
     } else if (difficulty === 'medium') {
-       a = getRandomInt(2, 9);
-       b = getRandomInt(2, 9);
-       c = getRandomInt(1, 20);
+      a = getRandomInt(2, 9);
+      b = getRandomInt(2, 9);
+      c = getRandomInt(1, 20);
     } else {
-       a = getRandomInt(3, 12);
-       b = getRandomInt(2, 10);
-       c = getRandomInt(1, 50);
+      a = getRandomInt(3, 12);
+      b = getRandomInt(2, 10);
+      c = getRandomInt(1, 50);
     }
 
     if (op === '+') {
@@ -291,36 +291,36 @@ export const generateQuestion = (attempt: number, category: GameCategory, diffic
 
   // --- NEW CATEGORY: ALL MIXED (EXPERTO) ---
   if (category === 'all_mixed') {
-     const type = Math.random();
-     
-     if (type < 0.5) {
-       const c = getRandomInt(2, difficulty === 'hard' ? 9 : 5);
-       const res = getRandomInt(2, difficulty === 'hard' ? 12 : 5);
-       const product = c * res; 
-       
-       let a = 1, b = product;
-       for(let i=Math.floor(Math.sqrt(product)); i>=1; i--) {
-         if (product % i === 0) {
-           a = i;
-           b = product / i;
-           break;
-         }
-       }
-       return { text: `${a} × ${b} ÷ ${c}`, answer: res };
-     } else {
-       const c = getRandomInt(2, 5);
-       const b = getRandomInt(2, 5);
-       const a = getRandomInt(1, 20);
-       const op = getOperation();
-       
-       if (op === '+') {
-         return { text: `${a} + ${b} × ${c}`, answer: a + (b * c) };
-       } else {
-         let bigA = a;
-         if (bigA < (b*c)) bigA = (b*c) + getRandomInt(1, 10);
-         return { text: `${bigA} - ${b} × ${c}`, answer: bigA - (b * c) };
-       }
-     }
+    const type = Math.random();
+
+    if (type < 0.5) {
+      const c = getRandomInt(2, difficulty === 'hard' ? 9 : 5);
+      const res = getRandomInt(2, difficulty === 'hard' ? 12 : 5);
+      const product = c * res;
+
+      let a = 1, b = product;
+      for (let i = Math.floor(Math.sqrt(product)); i >= 1; i--) {
+        if (product % i === 0) {
+          a = i;
+          b = product / i;
+          break;
+        }
+      }
+      return { text: `${a} × ${b} ÷ ${c}`, answer: res };
+    } else {
+      const c = getRandomInt(2, 5);
+      const b = getRandomInt(2, 5);
+      const a = getRandomInt(1, 20);
+      const op = getOperation();
+
+      if (op === '+') {
+        return { text: `${a} + ${b} × ${c}`, answer: a + (b * c) };
+      } else {
+        let bigA = a;
+        if (bigA < (b * c)) bigA = (b * c) + getRandomInt(1, 10);
+        return { text: `${bigA} - ${b} × ${c}`, answer: bigA - (b * c) };
+      }
+    }
   }
 
   return { text: "1 + 1", answer: 2 };

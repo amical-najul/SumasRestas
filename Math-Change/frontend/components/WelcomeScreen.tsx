@@ -23,20 +23,20 @@ const WelcomeScreen: React.FC<Props> = ({ user, onStart, onLeaderboard, onStudy,
   // Difficulty Order: Easy(0), EasyMedium(1), Medium(2), MedHard(3), Hard(4)
   // Guests have all unlocked by default, Admins have all unlocked.
   // Standard Users use user.unlockedLevel
-  
+
   const difficultyOrder: Difficulty[] = ['easy', 'easy_medium', 'medium', 'medium_hard', 'hard'];
-  
+
   // Reset difficulty to 'easy' if the current selected difficulty is locked when user logs in
   useEffect(() => {
     if (user && user.role !== 'ADMIN') {
-        const currentIdx = difficultyOrder.indexOf(difficulty);
-        if (currentIdx > (user.unlockedLevel ?? 0)) {
-            setDifficulty('easy');
-        }
+      const currentIdx = difficultyOrder.indexOf(difficulty);
+      if (currentIdx > (user.unlockedLevel ?? 0)) {
+        setDifficulty('easy');
+      }
     }
     if (user) setUsername(user.username);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user]);
+  }, [user, difficulty]);
 
   const handleStart = () => {
     const finalName = username.trim() || "Usuario";
@@ -78,41 +78,41 @@ const WelcomeScreen: React.FC<Props> = ({ user, onStart, onLeaderboard, onStudy,
 
   return (
     <div className="flex flex-col items-center justify-center w-full h-full text-center space-y-4 animate-fade-in py-4 relative">
-      
+
       {/* Top Right Controls (User & Admin) */}
       <div className="absolute top-0 right-0 flex gap-2">
-         {user && user.role === 'ADMIN' && (
-             <button onClick={onAdmin} className="p-2 bg-red-500/20 hover:bg-red-500/40 text-red-300 rounded-lg transition-colors border border-red-500/30" title="Panel Administrador">
-                <Shield size={20} />
-             </button>
-         )}
-         {user && (
-            <button onClick={onProfile} className="p-2 bg-white/5 hover:bg-white/20 text-gray-300 rounded-lg transition-colors border border-white/10" title="Mi Perfil">
-                <Settings size={20} />
-            </button>
-         )}
-         <button onClick={onLogout} className="p-2 bg-white/5 hover:bg-white/20 text-gray-300 rounded-lg transition-colors border border-white/10" title="Salir">
-            <LogOut size={20} />
-         </button>
+        {user && user.role === 'ADMIN' && (
+          <button onClick={onAdmin} className="p-2 bg-red-500/20 hover:bg-red-500/40 text-red-300 rounded-lg transition-colors border border-red-500/30" title="Panel Administrador">
+            <Shield size={20} />
+          </button>
+        )}
+        {user && (
+          <button onClick={onProfile} className="p-2 bg-white/5 hover:bg-white/20 text-gray-300 rounded-lg transition-colors border border-white/10" title="Mi Perfil">
+            <Settings size={20} />
+          </button>
+        )}
+        <button onClick={onLogout} className="p-2 bg-white/5 hover:bg-white/20 text-gray-300 rounded-lg transition-colors border border-white/10" title="Salir">
+          <LogOut size={20} />
+        </button>
       </div>
 
       <div className="relative mb-1">
         <div className="absolute -inset-4 bg-blue-500/30 rounded-full blur-xl animate-pulse"></div>
         {user?.avatar ? (
-             <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-blue-400 relative z-10 shadow-lg">
-                <img src={user.avatar} alt="User" className="w-full h-full object-cover" />
-             </div>
+          <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-blue-400 relative z-10 shadow-lg">
+            <img src={user.avatar} alt="User" className="w-full h-full object-cover" />
+          </div>
         ) : (
-             <Calculator size={50} className="text-blue-400 relative z-10" />
+          <Calculator size={50} className="text-blue-400 relative z-10" />
         )}
       </div>
-      
+
       <div>
         <h1 className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-300 via-purple-300 to-pink-300 mb-1">
           Math Challenge
         </h1>
         <p className="text-gray-400 text-sm">
-           {user ? `¡Hola, ${user.username}!` : 'Entrenamiento mental'}
+          {user ? `¡Hola, ${user.username}!` : 'Entrenamiento mental'}
         </p>
       </div>
 
@@ -132,7 +132,7 @@ const WelcomeScreen: React.FC<Props> = ({ user, onStart, onLeaderboard, onStudy,
             />
           </div>
         )}
-        
+
         {error && <p className="text-red-400 text-xs font-medium">{error}</p>}
 
         {/* Category Selector */}
@@ -141,11 +141,10 @@ const WelcomeScreen: React.FC<Props> = ({ user, onStart, onLeaderboard, onStudy,
             <button
               key={cat.id}
               onClick={() => setSelectedCategory(cat.id)}
-              className={`p-2 rounded-lg border flex flex-col items-center justify-center gap-1 transition-all ${
-                selectedCategory === cat.id 
-                  ? `${cat.color} border-white/40 text-white shadow-lg scale-[1.02] z-10 ring-2 ring-white/20` 
+              className={`p-2 rounded-lg border flex flex-col items-center justify-center gap-1 transition-all ${selectedCategory === cat.id
+                  ? `${cat.color} border-white/40 text-white shadow-lg scale-[1.02] z-10 ring-2 ring-white/20`
                   : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10'
-              } ${cat.colSpan || ''}`}
+                } ${cat.colSpan || ''}`}
             >
               <div className="flex items-center space-x-2">
                 {cat.icon}
@@ -159,8 +158,8 @@ const WelcomeScreen: React.FC<Props> = ({ user, onStart, onLeaderboard, onStudy,
         {selectedCategory !== 'challenge' && (
           <div className="animate-fade-in-up bg-black/20 p-2 rounded-xl border border-white/5">
             <div className="flex items-center justify-center space-x-2 mb-1 text-gray-400">
-               <Signal size={14} />
-               <span className="text-[10px] uppercase font-bold tracking-wider">Nivel de Dificultad</span>
+              <Signal size={14} />
+              <span className="text-[10px] uppercase font-bold tracking-wider">Nivel de Dificultad</span>
             </div>
             <div className="flex justify-between gap-2">
               {difficulties.map((diff) => {
@@ -170,13 +169,12 @@ const WelcomeScreen: React.FC<Props> = ({ user, onStart, onLeaderboard, onStudy,
                     key={diff.id}
                     onClick={() => !locked && setDifficulty(diff.id)}
                     disabled={locked}
-                    className={`w-full aspect-square rounded-lg border text-lg font-bold transition-all flex items-center justify-center relative ${
-                      locked 
+                    className={`w-full aspect-square rounded-lg border text-lg font-bold transition-all flex items-center justify-center relative ${locked
                         ? 'bg-black/40 border-white/5 text-gray-600 cursor-not-allowed'
                         : difficulty === diff.id
-                            ? `${diff.color} border-white text-white shadow-md scale-110 z-10`
-                            : `bg-white/5 border-white/10 text-gray-400 ${diff.hover}`
-                    }`}
+                          ? `${diff.color} border-white text-white shadow-md scale-110 z-10`
+                          : `bg-white/5 border-white/10 text-gray-400 ${diff.hover}`
+                      }`}
                     title={locked ? "Nivel Bloqueado" : diff.label}
                   >
                     {locked ? <Lock size={16} /> : diff.label}
@@ -185,25 +183,25 @@ const WelcomeScreen: React.FC<Props> = ({ user, onStart, onLeaderboard, onStudy,
               })}
             </div>
             {user && user.role !== 'ADMIN' && (
-                <p className="text-[10px] text-gray-500 mt-1">Completa un nivel con &gt;60% para desbloquear el siguiente.</p>
+              <p className="text-[10px] text-gray-500 mt-1">Completa un nivel con &gt;60% para desbloquear el siguiente.</p>
             )}
           </div>
         )}
-        
+
         {selectedCategory === 'challenge' && (
-             <p className="text-xs text-gray-500 italic">El modo Desafío aumenta la dificultad automáticamente.</p>
+          <p className="text-xs text-gray-500 italic">El modo Desafío aumenta la dificultad automáticamente.</p>
         )}
 
         {/* Action Buttons */}
         <div className="flex space-x-2 pt-1">
-           <button
+          <button
             onClick={onStudy}
             className="px-4 py-3 bg-pink-600/20 hover:bg-pink-600/40 border border-pink-500/30 text-pink-300 rounded-xl transition-all flex items-center justify-center"
             title="Estudiar Tablas"
           >
             <BookOpen size={20} />
           </button>
-           <button
+          <button
             onClick={handleLeaderboard}
             className="px-4 py-3 bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 rounded-xl transition-all flex items-center justify-center"
             title="Ver Resultados"

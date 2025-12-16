@@ -47,7 +47,7 @@ const LoginScreen: React.FC<Props> = ({ onLoginSuccess, onGuestPlay }) => {
         <h1 className="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400 mb-2">
           Math Challenge
         </h1>
-        <p className="text-gray-400">Accede para guardar tu progreso</p>
+
       </div>
 
       <div className="bg-white/5 backdrop-blur-xl border border-white/10 p-8 rounded-3xl w-full shadow-2xl">
@@ -128,9 +128,7 @@ const LoginScreen: React.FC<Props> = ({ onLoginSuccess, onGuestPlay }) => {
         </div>
       </div>
 
-      <div className="text-xs text-gray-600 max-w-xs text-center">
-        Credenciales Admin por defecto: <br /> Email: admin@math.com | Pass: admin
-      </div>
+
     </div>
   );
 };

@@ -5,7 +5,8 @@ import os
 from dotenv import load_dotenv
 from supabase import create_client, Client
 from pydantic import BaseModel
-from models import User, UserCreate, UserLogin, ScoreRecord
+from .models import User, UserCreate, UserLogin, ScoreRecord
+from .database import supabase
 from datetime import datetime
 import uuid
 
@@ -22,16 +23,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Supabase Setup - Using SERVICE ROLE KEY to bypass RLS
-url: str = os.environ.get("SUPABASE_URL")
-# CRITICAL: Use Service Role Key to bypass Row Level Security
-key: str = os.environ.get("SUPABASE_SERVICE_ROLE_KEY") or os.environ.get("SUPABASE_KEY")
-supabase: Client = create_client(url, key) if url and key else None
-
 @app.on_event("startup")
 def check_db_connection():
+    # Validation happens in database.py import
     if not supabase:
-        raise RuntimeError("Supabase no está configurado. Verifique las variables de entorno.")
+        raise RuntimeError("Supabase connection failed")
 
 @app.get("/")
 def read_root():

@@ -17,7 +17,7 @@ services:
     build:
       context: ./frontend
       args:
-        VITE_API_URL: http://localhost:5000
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:5000}
     ports:
       - "8080:80" # Mapped to host 8080 to avoid collision
     depends_on:

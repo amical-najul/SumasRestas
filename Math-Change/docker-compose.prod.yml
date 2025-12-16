@@ -1,0 +1,51 @@
+version: '3.8'
+
+services:
+  backend_api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: ${NOMBRE_APP}-backend
+    restart: always
+    environment:
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_KEY=${SUPABASE_KEY}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+      # No need for DB secrets if Supabase manages it via API, but kept for completeness based on user template
+      # - DATABASE_URL=${DATABASE_URL} 
+      # - SECRET_KEY=${SECRET_KEY}
+    networks:
+      - default
+      - traefik_proxy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik_proxy"
+      - "traefik.http.routers.${NOMBRE_APP}-api.rule=Host(`sumas.n8nprueba.shop`) && PathPrefix(`/api`, `/docs`, `/redoc`, `/openapi.json`)"
+      - "traefik.http.routers.${NOMBRE_APP}-api.entrypoints=websecure"
+      - "traefik.http.routers.${NOMBRE_APP}-api.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.${NOMBRE_APP}-api.priority=100"
+      - "traefik.http.services.${NOMBRE_APP}-api.loadbalancer.server.port=8000"
+
+  frontend_app:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: ${NOMBRE_APP}-frontend
+    restart: always
+    depends_on:
+      - backend_api
+    networks:
+      - default
+      - traefik_proxy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik_proxy"
+      - "traefik.http.routers.${NOMBRE_APP}-web.rule=Host(`sumas.n8nprueba.shop`)"
+      - "traefik.http.routers.${NOMBRE_APP}-web.entrypoints=websecure"
+      - "traefik.http.routers.${NOMBRE_APP}-web.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.${NOMBRE_APP}-web.priority=1"
+      - "traefik.http.services.${NOMBRE_APP}-web.loadbalancer.server.port=80"
+
+networks:
+  traefik_proxy:
+    external: true
