@@ -1,5 +1,29 @@
 # Historial de Cambios - Math Challenge
 
+## Versión 0.0.5 (Seguridad y Estabilidad)
+
+### 🔒 Hardening de Seguridad
+*   **Protección de Endpoints Backend:**
+    *   Implementación de middlewares `get_current_user` y `get_admin_user`.
+    *   Restricción de rutas críticas: `/users` (Solo Admin), `/scores` y `/users` (POST) requieren autenticación.
+*   **Gestión de Sesiones:**
+    *   Corrección del Logout para eliminar tokens del `localStorage`.
+    *   Advertencias de seguridad para `SECRET_KEY` inseguras.
+*   **Validaciones Frontend:**
+    *   Nuevo sistema de validación de email y campos vacíos en Login/Registro.
+    *   Prevención de múltiples envíos (Loading State).
+
+### 🛠️ Correcciones Técnicas
+*   **Estabilidad:** Fix de "División por Cero" en cálculo de puntajes.
+*   **Dependencias:** Solución a conflicto `bcrypt` vs `passlib` (Error 500 en registros).
+*   **Limpieza:** Eliminación de importaciones duplicadas y código muerto.
+
+### 🧪 Infraestructura de Pruebas
+*   **Tests de Integración (Backend):** Scripts para validar conexión a BD (`test_crud_flow.py`) y simulador de cliente (`test_api_integration.py`).
+*   **Documentación de Pruebas:** Guía reutilizable (`test.md`) y esquemas de autenticación (`esquema_auth_secure.html`).
+
+---
+
 ## Versión 0.0.4 (Migración Full Stack)
 
 ### 🏗️ Arquitectura Full Stack
