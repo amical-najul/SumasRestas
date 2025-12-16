@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "5000:8000" # Mapped to host 5000 to avoid collision
+    environment:
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_KEY=${SUPABASE_KEY}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+      - DB_PASSWORD=${DB_PASSWORD}
+    volumes:
+      - ./backend:/app
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_URL: http://localhost:5000
+    ports:
+      - "8080:80" # Mapped to host 8080 to avoid collision
+    depends_on:
+      - backend
+
+# We can add a .env file support or pass variables via shell
