@@ -6,8 +6,10 @@ from dotenv import load_dotenv
 from supabase import create_client, Client
 from pydantic import BaseModel
 from .models import User, UserCreate, UserLogin, ScoreRecord
+from .models import User, UserCreate, UserLogin, ScoreRecord
 from .database import supabase
-from datetime import datetime
+from .auth import verify_password, get_password_hash, create_access_token, ACCESS_TOKEN_EXPIRE_MINUTES
+from datetime import datetime, timedelta
 import uuid
 
 load_dotenv()
@@ -49,8 +51,8 @@ def login(credentials: UserLogin):
     if user_data.get("status") == "BANNED":
         raise HTTPException(status_code=403, detail="Esta cuenta ha sido desactivada.")
         
-    # Verify password (SIMULATED/PLAIN TEXT as per current frontend requirement)
-    if user_data.get("password") != credentials.password:
+    # Verify password (HASHED)
+    if not user_data.get("password") or not verify_password(credentials.password, user_data["password"]):
         raise HTTPException(status_code=401, detail="Contraseña incorrecta.")
         
     # Update last login
@@ -58,9 +60,20 @@ def login(credentials: UserLogin):
     supabase.table("users").update({"lastLogin": now}).eq("id", user_data["id"]).execute()
     user_data["lastLogin"] = now
     
+    # Generate JWT
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"sub": user_data["email"], "id": user_data["id"], "role": user_data.get("role", "USER")},
+        expires_delta=access_token_expires
+    )
+    
     # Return user without password
     user_data.pop("password", None)
-    return {"success": True, "user": user_data}
+    return {
+        "success": True, 
+        "user": user_data,
+        "token": access_token
+    }
 
 @app.post("/register")
 def register(user: UserCreate):
@@ -69,29 +82,43 @@ def register(user: UserCreate):
     if res.data:
         return {"success": False, "message": "El correo ya está registrado."}
     
-    # Create new user - use model_dump for Pydantic v2, or dict() for v1
+    # Create new user - use model_dump for Pydantic v2
     try:
-        new_user = user.model_dump() if hasattr(user, 'model_dump') else user.dict()
+        user_dict = user.model_dump() if hasattr(user, 'model_dump') else user.dict()
     except Exception:
-        new_user = dict(user)
+        user_dict = dict(user)
     
-    new_user["id"] = str(uuid.uuid4())
-    new_user["createdAt"] = datetime.utcnow().isoformat()
+    # HASH PASSWORD
+    user_dict["password"] = get_password_hash(user_dict["password"])
     
-    # Ensure settings is a proper dict (not None or Pydantic model)
-    if new_user.get("settings") is None:
-        new_user["settings"] = {}
-    elif hasattr(new_user["settings"], "model_dump"):
-        new_user["settings"] = new_user["settings"].model_dump()
-    elif hasattr(new_user["settings"], "dict"):
-        new_user["settings"] = new_user["settings"].dict()
+    user_dict["id"] = str(uuid.uuid4())
+    user_dict["createdAt"] = datetime.utcnow().isoformat()
+    
+    # Ensure settings is a proper dict
+    if user_dict.get("settings") is None:
+        user_dict["settings"] = {}
+    elif hasattr(user_dict["settings"], "dict"):
+         user_dict["settings"] = user_dict["settings"].dict()
+
+    # Pre-generate Token for auto-login after register
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"sub": user_dict["email"], "id": user_dict["id"], "role": user_dict.get("role", "USER")},
+        expires_delta=access_token_expires
+    )
         
     # Insert
     try:
-        insert_res = supabase.table("users").insert(new_user).execute()
+        insert_res = supabase.table("users").insert(user_dict).execute()
         
         if insert_res.data:
-            return {"success": True, "user": insert_res.data[0]}
+            created_user = insert_res.data[0]
+            created_user.pop("password", None)
+            return {
+                "success": True, 
+                "user": created_user,
+                "token": access_token
+            }
         return {"success": False, "message": "Error creating user - no data returned"}
     except Exception as e:
         print(f"Registration error: {e}")

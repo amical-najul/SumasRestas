@@ -2,10 +2,40 @@ import { ScoreRecord, User, UserRole } from '../types';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
+// --- TOKEN MANAGEMENT ---
+const TOKEN_KEY = 'auth_token';
+const USER_KEY = 'auth_user';
+
+export const setSession = (token: string, user: User) => {
+  localStorage.setItem(TOKEN_KEY, token);
+  localStorage.setItem(USER_KEY, JSON.stringify(user));
+};
+
+export const getSession = (): { token: string | null; user: User | null } => {
+  const token = localStorage.getItem(TOKEN_KEY);
+  const userStr = localStorage.getItem(USER_KEY);
+  return {
+    token,
+    user: userStr ? JSON.parse(userStr) : null
+  };
+};
+
+export const clearSession = () => {
+  localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem(USER_KEY);
+};
+
+// HELPER with Auth
 async function apiRequest<T>(endpoint: string, method: string = 'GET', body?: any): Promise<T> {
+  const { token } = getSession();
+
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
   };
+
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
 
   const config: RequestInit = {
     method,
@@ -16,6 +46,9 @@ async function apiRequest<T>(endpoint: string, method: string = 'GET', body?: an
   const response = await fetch(`${API_URL}${endpoint}`, config);
 
   if (!response.ok) {
+    if (response.status === 401) {
+      // Optional: clearSession(); // if token expired
+    }
     const err = await response.json().catch(() => ({}));
     throw new Error(err.detail || err.message || 'API Error');
   }
@@ -188,7 +221,8 @@ export const getUserByEmail = async (email: string): Promise<User | undefined> =
 export const loginUser = async (email: string, password: string): Promise<{ success: boolean; user?: User; message?: string }> => {
   try {
     const data = await apiRequest<any>('/login', 'POST', { email, password });
-    if (data.success) {
+    if (data.success && data.token) {
+      setSession(data.token, data.user); // PERSISTENCE
       return { success: true, user: data.user };
     }
     return { success: false, message: data.message || "Login failed" };
@@ -202,7 +236,8 @@ export const registerUser = async (username: string, email: string, password: st
     // New User creation is handled by backend which assigns ID and Dates
     const dummyUser = { username, email, password }; // Backend expects UserCreate structure
     const data = await apiRequest<any>('/register', 'POST', dummyUser);
-    if (data.success) {
+    if (data.success && data.token) {
+      setSession(data.token, data.user); // PERSISTENCE
       return { success: true, user: data.user };
     }
     return { success: false, message: data.message || "Error al registrar" };

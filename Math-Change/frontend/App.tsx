@@ -9,7 +9,7 @@ import StudyTablesScreen from './components/StudyTablesScreen';
 import LoginScreen from './components/LoginScreen';
 import ProfileScreen from './components/ProfileScreen';
 import AdminPanel from './components/AdminPanel';
-import { saveScore, saveUser } from './services/storageService';
+import { saveScore, saveUser, getSession } from './services/storageService';
 
 const App: React.FC = () => {
   // Start at LOGIN screen
@@ -22,6 +22,16 @@ const App: React.FC = () => {
   const [category, setCategory] = useState<GameCategory>('challenge');
   const [difficulty, setDifficulty] = useState<Difficulty>('medium');
   const [gameStats, setGameStats] = useState<GameStats | null>(null);
+
+  // Auto-Restore Session
+  React.useEffect(() => {
+    const { user, token } = getSession();
+    if (user && token) {
+      setCurrentUser(user);
+      setUsername(user.username);
+      setScreen(GameScreenState.WELCOME);
+    }
+  }, []);
 
   // Difficulty Mapping for Progression
   const difficultyOrder: Difficulty[] = ['easy', 'easy_medium', 'medium', 'medium_hard', 'hard'];
