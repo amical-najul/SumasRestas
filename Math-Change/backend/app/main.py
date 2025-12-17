@@ -113,8 +113,8 @@ def delete_user(user_id: str, current_user: dict = Depends(get_admin_user)):
 def get_scores(user: Optional[str] = None, current_user: dict = Depends(get_current_user)):
     query = supabase.table("scores").select("*")
     if user:
-        # Case insensitive usually handled by DB, here precise match or assume normalized
-        query = query.eq("user", user)
+        # Case insensitive match using ilike
+        query = query.ilike("user", user)
     
     res = query.execute()
     return res.data
@@ -291,7 +291,10 @@ async def upload_avatar(file: UploadFile = File(...), current_user: dict = Depen
              raise HTTPException(status_code=500, detail=f"Error subiendo imagen ({type(e).__name__}): {str(e)}")
 
     # Construct URL
-    url = f"{S3_ENDPOINT_URL}/{S3_BUCKET_NAME}/{filename}"
+    # FIX: Ensure URL is accessible. If using MinIO/Local S3, path style is safer.
+    # Check if endpoint already ends with slash to avoid double slash
+    base_url = S3_ENDPOINT_URL.rstrip('/')
+    url = f"{base_url}/{S3_BUCKET_NAME}/{filename}"
     print(f"DEBUG: Upload success: {url}")
     
     # Update User in DB
