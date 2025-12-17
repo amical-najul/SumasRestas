@@ -135,17 +135,34 @@ const App: React.FC = () => {
     if (currentUser && currentUser.role !== 'ADMIN') {
       const currentDiffIndex = difficultyOrder.indexOf(difficulty);
 
-      // If user played the level corresponding to their max unlocked level
-      // AND they "passed" (e.g. finished the set, score > 50% is a good threshold, but simple completion is fine too)
-      if (currentDiffIndex !== -1 && currentDiffIndex === currentUser.unlockedLevel) {
+      // Calculate current max unlocked level for this specific category
+      const currentUnlocked = currentUser.settings?.unlockedLevels?.[category] ?? currentUser.unlockedLevel ?? 0;
+
+      // If user played the level corresponding to their max unlocked level for this category
+      if (currentDiffIndex !== -1 && currentDiffIndex === currentUnlocked) {
         // Check if there is a next level
         if (currentDiffIndex < difficultyOrder.length - 1) {
           // Determine if pass? Let's say score >= 60%
           if (score >= 60) {
-            const updatedUser = {
-              ...currentUser,
-              unlockedLevel: currentDiffIndex + 1
+
+            // Update the map for this category
+            const newUnlockedLevels = {
+              ...(currentUser.settings.unlockedLevels || {}),
+              [category]: currentDiffIndex + 1
             };
+
+            const updatedUser: User = {
+              ...currentUser,
+              settings: {
+                ...currentUser.settings,
+                unlockedLevels: newUnlockedLevels
+              },
+              // Also update global legacy level just in case, taking the max of all categories or just existing behavior
+              // For safety/backward compat, let's keep unlockedLevel as max of any category? 
+              // Or just keep it as is. Let's maximize it to avoid regressions.
+              unlockedLevel: Math.max(currentUser.unlockedLevel, currentDiffIndex + 1)
+            };
+
             await saveUser(updatedUser);
             setCurrentUser(updatedUser);
           }

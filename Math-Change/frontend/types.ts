@@ -52,6 +52,7 @@ export type UserStatus = 'ACTIVE' | 'BANNED';
 
 export interface UserSettings {
   customTimers?: Partial<Record<Difficulty, number>>; // Custom seconds per difficulty
+  unlockedLevels?: Record<string, number>; // Category -> Level Index
 }
 
 export interface User {

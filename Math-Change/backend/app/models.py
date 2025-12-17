@@ -4,6 +4,7 @@ from datetime import datetime
 
 class UserSettings(BaseModel):
     customTimers: Optional[Dict[str, int]] = None
+    unlockedLevels: Optional[Dict[str, int]] = {} # Category -> Max Unlocked Level Index
 
 class UserBase(BaseModel):
     username: str

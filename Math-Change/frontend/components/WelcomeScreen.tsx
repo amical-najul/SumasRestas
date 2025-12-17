@@ -18,6 +18,7 @@ const WelcomeScreen: React.FC<Props> = ({ user, onStart, onLeaderboard, onStudy,
   const [error, setError] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<GameCategory>('challenge');
   const [difficulty, setDifficulty] = useState<Difficulty>('medium');
+  const [imgError, setImgError] = useState(false);
 
   // Sync unlocked level logic
   // Difficulty Order: Easy(0), EasyMedium(1), Medium(2), MedHard(3), Hard(4)
@@ -26,17 +27,22 @@ const WelcomeScreen: React.FC<Props> = ({ user, onStart, onLeaderboard, onStudy,
 
   const difficultyOrder: Difficulty[] = ['easy', 'easy_medium', 'medium', 'medium_hard', 'hard'];
 
-  // Reset difficulty to 'easy' if the current selected difficulty is locked when user logs in
+  // Reset difficulty to 'easy' if the current selected difficulty is locked when user logs in OR category changes
   useEffect(() => {
     if (user && user.role !== 'ADMIN') {
       const currentIdx = difficultyOrder.indexOf(difficulty);
-      if (currentIdx > (user.unlockedLevel ?? 0)) {
+
+      // Independent Level Logic
+      // Priority: user.settings.unlockedLevels[category] > user.unlockedLevel (legacy global)
+      const catLevel = user.settings?.unlockedLevels?.[selectedCategory] ?? user.unlockedLevel ?? 0;
+
+      if (currentIdx > catLevel) {
         setDifficulty('easy');
       }
     }
     if (user) setUsername(user.username);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, difficulty]);
+  }, [user, difficulty, selectedCategory]);
 
   const handleStart = () => {
     const finalName = username.trim() || "Usuario";
@@ -73,7 +79,11 @@ const WelcomeScreen: React.FC<Props> = ({ user, onStart, onLeaderboard, onStudy,
   const isLevelLocked = (levelIndex: number) => {
     if (!user) return false; // Guests have all unlocked
     if (user.role === 'ADMIN') return false; // Admins have all unlocked
-    return levelIndex > (user.unlockedLevel ?? 0);
+
+    // Independent Level Logic
+    const catLevel = user.settings?.unlockedLevels?.[selectedCategory] ?? user.unlockedLevel ?? 0;
+
+    return levelIndex > catLevel;
   };
 
   return (
@@ -98,9 +108,14 @@ const WelcomeScreen: React.FC<Props> = ({ user, onStart, onLeaderboard, onStudy,
 
       <div className="relative mb-1">
         <div className="absolute -inset-4 bg-blue-500/30 rounded-full blur-xl animate-pulse"></div>
-        {user?.avatar ? (
+        {user?.avatar && !imgError ? (
           <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-blue-400 relative z-10 shadow-lg">
-            <img src={user.avatar} alt="User" className="w-full h-full object-cover" />
+            <img
+              src={user.avatar}
+              alt="User"
+              className="w-full h-full object-cover"
+              onError={() => setImgError(true)}
+            />
           </div>
         ) : (
           <Calculator size={50} className="text-blue-400 relative z-10" />
@@ -142,8 +157,8 @@ const WelcomeScreen: React.FC<Props> = ({ user, onStart, onLeaderboard, onStudy,
               key={cat.id}
               onClick={() => setSelectedCategory(cat.id)}
               className={`p-2 rounded-lg border flex flex-col items-center justify-center gap-1 transition-all ${selectedCategory === cat.id
-                  ? `${cat.color} border-white/40 text-white shadow-lg scale-[1.02] z-10 ring-2 ring-white/20`
-                  : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10'
+                ? `${cat.color} border-white/40 text-white shadow-lg scale-[1.02] z-10 ring-2 ring-white/20`
+                : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10'
                 } ${cat.colSpan || ''}`}
             >
               <div className="flex items-center space-x-2">
@@ -170,10 +185,10 @@ const WelcomeScreen: React.FC<Props> = ({ user, onStart, onLeaderboard, onStudy,
                     onClick={() => !locked && setDifficulty(diff.id)}
                     disabled={locked}
                     className={`w-full aspect-square rounded-lg border text-lg font-bold transition-all flex items-center justify-center relative ${locked
-                        ? 'bg-black/40 border-white/5 text-gray-600 cursor-not-allowed'
-                        : difficulty === diff.id
-                          ? `${diff.color} border-white text-white shadow-md scale-110 z-10`
-                          : `bg-white/5 border-white/10 text-gray-400 ${diff.hover}`
+                      ? 'bg-black/40 border-white/5 text-gray-600 cursor-not-allowed'
+                      : difficulty === diff.id
+                        ? `${diff.color} border-white text-white shadow-md scale-110 z-10`
+                        : `bg-white/5 border-white/10 text-gray-400 ${diff.hover}`
                       }`}
                     title={locked ? "Nivel Bloqueado" : diff.label}
                   >

@@ -162,6 +162,34 @@ def delete_scores(scope: str = "all", current_user: dict = Depends(get_current_u
         print(f"Error deleting scores: {e}")
         raise HTTPException(status_code=500, detail=f"Error deleting scores: {str(e)}")
 
+@app.delete("/scores/{score_id}")
+def delete_score_by_id(score_id: str, current_user: dict = Depends(get_current_user)):
+    """
+    Delete a specific score by ID.
+    """
+    try:
+        # Verify ownership
+        # We need to check if the score belongs to the current user
+        # Since RLS isn't strictly enforced for service role, we do it manually or assume 'user' column matches username
+        username = current_user.get("username")
+        
+        # Verify first
+        existing = supabase.table("scores").select("user").eq("id", score_id).execute()
+        if not existing.data:
+            raise HTTPException(status_code=404, detail="Puntuación no encontrada")
+            
+        if existing.data[0]["user"] != username and current_user.get("role") != "ADMIN":
+             raise HTTPException(status_code=403, detail="No tienes permiso para eliminar esta puntuación")
+
+        res = supabase.table("scores").delete().eq("id", score_id).execute()
+        return {"message": "Puntuación eliminada", "id": score_id}
+        
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        print(f"Error deleting score {score_id}: {e}")
+        raise HTTPException(status_code=500, detail=f"Error eliminando score: {str(e)}")
+
 # --- CURRENT USER & AVATAR ---
 
 @app.get("/users/me")

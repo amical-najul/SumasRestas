@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ScoreRecord } from '../types';
-import { getTopScoresByUser } from '../services/storageService';
-import { ArrowLeft, Calendar, Clock, CheckCircle } from 'lucide-react';
+import { getTopScoresByUser, deleteScoreById } from '../services/storageService';
+import { ArrowLeft, Calendar, Clock, CheckCircle, Trash2 } from 'lucide-react';
 
 interface Props {
   username: string;
@@ -18,6 +18,16 @@ const LeaderboardScreen: React.FC<Props> = ({ username, onBack }) => {
     };
     fetchData();
   }, [username]);
+
+  const handleDelete = async (scoreId: string) => {
+    if (!window.confirm("¿Eliminar este registro?")) return;
+    try {
+      await deleteScoreById(scoreId);
+      setScores(prev => prev.filter(s => s.id !== scoreId));
+    } catch (e) {
+      alert("Error eliminando: " + e);
+    }
+  };
 
   return (
     <div className="w-full max-w-lg flex flex-col h-[80vh] animate-fade-in">
@@ -66,13 +76,19 @@ const LeaderboardScreen: React.FC<Props> = ({ username, onBack }) => {
                   </div>
                 </div>
 
-                <div className="text-right">
+                <div className="text-right flex flex-col items-end">
                   <div className="flex items-center text-green-400 text-sm font-bold">
                     <CheckCircle size={14} className="mr-1" /> {record.correctCount}
                   </div>
-                  <div className="text-xs text-red-400 mt-1">
+                  <div className="text-xs text-red-400 mt-1 mb-2">
                     {record.errorCount} errores
                   </div>
+                  <button
+                    onClick={() => handleDelete(record.id)}
+                    className="p-1 hover:bg-red-500/20 text-gray-500 hover:text-red-400 rounded transition-colors"
+                  >
+                    <Trash2 size={14} />
+                  </button>
                 </div>
               </div>
             ))}

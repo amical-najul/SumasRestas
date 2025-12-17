@@ -74,6 +74,10 @@ export const deleteScores = async (scope: string = 'all'): Promise<void> => {
   await apiRequest(`/scores?scope=${scope}`, 'DELETE');
 };
 
+export const deleteScoreById = async (scoreId: string): Promise<void> => {
+  await apiRequest(`/scores/${scoreId}`, 'DELETE');
+};
+
 // NEW: Get basic stats (used in table list)
 export const getUserStatsSummary = async (username: string) => {
   const userScores = await apiRequest<ScoreRecord[]>(`/scores?user=${encodeURIComponent(username)}`); // Optimized to fetch only user scores
