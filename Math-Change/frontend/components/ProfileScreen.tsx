@@ -1,9 +1,9 @@
 
 import React, { useState, useRef } from 'react';
 import { User, Difficulty } from '../types';
-import { saveUser, uploadAvatar } from '../services/storageService';
+import { saveUser, uploadAvatar, deleteScores } from '../services/storageService';
 import { updateUserEmail, updateUserPassword } from '../services/firebaseAuthService';
-import { ArrowLeft, Camera, Save, Settings, User as UserIcon, Clock } from 'lucide-react';
+import { ArrowLeft, Camera, Save, Settings, User as UserIcon, Clock, Trash2, ShieldAlert } from 'lucide-react';
 
 interface Props {
   user: User;
@@ -129,6 +129,22 @@ const ProfileScreen: React.FC<Props> = ({ user, onUpdateUser, onBack }) => {
     'random_tables': 'Tablas Aleatorias'
   };
 
+  const handleDeleteHistory = async () => {
+    if (!window.confirm("¿Estás seguro de que quieres eliminar TODO tu historial de partidas? Esta acción no se puede deshacer.")) {
+      return;
+    }
+
+    try {
+      setMessage('Eliminando historial...');
+      await deleteScores('all');
+      setMessage('Historial eliminado correctamente.');
+      setTimeout(() => setMessage(''), 3000);
+    } catch (error: any) {
+      console.error("Delete error:", error);
+      setMessage(`Error: ${error.message}`);
+    }
+  };
+
   return (
     <div className="w-full max-w-4xl flex flex-col h-[85vh] animate-fade-in">
       <div className="flex items-center mb-6 px-2">
@@ -229,6 +245,24 @@ const ProfileScreen: React.FC<Props> = ({ user, onUpdateUser, onBack }) => {
                 </div>
               </div>
             ))}
+          </div>
+
+          <div className="flex items-center gap-2 mb-4 mt-8 text-red-300">
+            <ShieldAlert size={20} />
+            <h3 className="font-bold text-lg">Zona de Peligro</h3>
+          </div>
+
+          <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 flex justify-between items-center">
+            <div>
+              <p className="font-medium text-red-200">Historial de Partidas</p>
+              <p className="text-xs text-red-200/50">Elimina todos tus registros de puntuación de forma permanente.</p>
+            </div>
+            <button
+              onClick={handleDeleteHistory}
+              className="flex items-center gap-2 px-3 py-2 bg-red-500/20 hover:bg-red-500 hover:text-white text-red-400 rounded-lg transition-colors border border-red-500/30"
+            >
+              <Trash2 size={16} /> Eliminar
+            </button>
           </div>
 
           <div className="mt-auto pt-6 flex justify-end items-center gap-4">

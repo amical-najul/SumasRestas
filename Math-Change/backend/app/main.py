@@ -12,6 +12,8 @@ from .auth import verify_password, get_password_hash, create_access_token, ACCES
 from datetime import datetime, timedelta
 import uuid
 import boto3
+import io
+from PIL import Image, ImageOps
 
 load_dotenv()
 
@@ -136,6 +138,30 @@ def save_score(record: ScoreRecord, current_user: dict = Depends(get_current_use
         # Or return empty to avoid crash? Better to raise to see in Network tab.
         raise HTTPException(status_code=500, detail=f"Database Insert Error: {str(e)}")
 
+@app.delete("/scores")
+def delete_scores(scope: str = "all", current_user: dict = Depends(get_current_user)):
+    """
+    Delete scores for the current user.
+    scope: 'all' (default) deletes the entire history.
+    """
+    try:
+        # Scores are linked by 'user' column which corresponds to username
+        # TODO: Ideally should link by ID, but current schema uses username.
+        username = current_user.get("username")
+        if not username:
+             raise HTTPException(status_code=400, detail="Cannot identify user for deletion")
+
+        query = supabase.table("scores").delete().eq("user", username)
+        
+        # future: if scope == 'partial' ... logic
+        
+        res = query.execute()
+        return {"message": "Historial eliminado correctamente", "count": len(res.data) if res.data else 0}
+        
+    except Exception as e:
+        print(f"Error deleting scores: {e}")
+        raise HTTPException(status_code=500, detail=f"Error deleting scores: {str(e)}")
+
 # --- CURRENT USER & AVATAR ---
 
 @app.get("/users/me")
@@ -148,8 +174,35 @@ async def upload_avatar(file: UploadFile = File(...), current_user: dict = Depen
     if not file.content_type.startswith('image/'):
         raise HTTPException(status_code=400, detail="Solo se permiten imágenes")
 
+    # OPTIMIZATION START
+    try:
+        # Read file content
+        content = await file.read()
+        image = Image.open(io.BytesIO(content))
+        
+        # Convert to RGB (in case of RGBA/P) to allow WebP conversion and consistency
+        if image.mode in ('RGBA', 'P'):
+             image = image.convert('RGB')
+             
+        # Resize/Crop to 500x500 (Cover logic)
+        # ImageOps.fit crops the image to the specified aspect ratio and size
+        image = ImageOps.fit(image, (500, 500), method=Image.Resampling.LANCZOS)
+        
+        # Save to WebP buffer
+        buffer = io.BytesIO()
+        # optimize=True helps reduce size further
+        image.save(buffer, format="WEBP", quality=80, optimize=True)
+        buffer.seek(0)
+        
+        # Update filename extension to .webp
+        file_extension = "webp"
+        content_type = "image/webp"
+        
+    except Exception as img_err:
+        print(f"Image processing failed: {img_err}")
+        raise HTTPException(status_code=422, detail="Error procesando la imagen. Asegúrese de subir un archivo válido.")
+
     # Generate unique filename
-    file_extension = file.filename.split(".")[-1] if "." in file.filename else "jpg"
     filename = f"{current_user['id']}_{uuid.uuid4()}.{file_extension}"
     
     # DEBUG LOGS
@@ -170,10 +223,10 @@ async def upload_avatar(file: UploadFile = File(...), current_user: dict = Depen
     try:
         # Upload - Attempt 1
         s3.upload_fileobj(
-            file.file,
+            buffer,
             S3_BUCKET_NAME,
             filename,
-            ExtraArgs={'ACL': 'public-read', 'ContentType': file.content_type}
+            ExtraArgs={'ACL': 'public-read', 'ContentType': content_type}
         )
     except Exception as e:
         # Check for NoSuchBucket
@@ -193,14 +246,14 @@ async def upload_avatar(file: UploadFile = File(...), current_user: dict = Depen
                 print(f"INFO: Bucket {S3_BUCKET_NAME} created successfully.")
                 
                 # Reset file pointer
-                file.file.seek(0)
+                buffer.seek(0)
                 
                 # Retry Upload
                 s3.upload_fileobj(
-                    file.file,
+                    buffer,
                     S3_BUCKET_NAME,
                     filename,
-                    ExtraArgs={'ACL': 'public-read', 'ContentType': file.content_type}
+                    ExtraArgs={'ACL': 'public-read', 'ContentType': content_type}
                 )
             except Exception as create_err:
                  print(f"CRITICAL: Failed to auto-create bucket: {create_err}")
