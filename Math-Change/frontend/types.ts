@@ -10,15 +10,15 @@ export enum GameScreenState {
   ADMIN_PANEL // New Admin Dashboard
 }
 
-export type GameCategory = 
-  | 'challenge' 
-  | 'addition' 
-  | 'subtraction' 
-  | 'multiplication' 
+export type GameCategory =
+  | 'challenge'
+  | 'addition'
+  | 'subtraction'
+  | 'multiplication'
   | 'division'
-  | 'mixed_add_sub'    
-  | 'mixed_mult_add'   
-  | 'all_mixed';       
+  | 'mixed_add_sub'
+  | 'mixed_mult_add'
+  | 'all_mixed';
 
 export type Difficulty = 'easy' | 'easy_medium' | 'medium' | 'medium_hard' | 'hard' | 'random_tables';
 
@@ -36,7 +36,7 @@ export interface ScoreRecord {
   avgTime: number;
   date: string;
   category?: string;
-  difficulty?: string; 
+  difficulty?: string;
 }
 
 export interface GameStats {
@@ -58,7 +58,7 @@ export interface User {
   id: string;
   username: string;
   email: string;
-  password: string; // Stored as plain text for simulation purposes
+  password: string; // Legacy field - not used with Firebase Auth
   role: UserRole;
   status: UserStatus;
   avatar?: string; // Base64 string

@@ -229,8 +229,10 @@ export const generateQuestion = (attempt: number, category: GameCategory, diffic
   if (category === 'mixed_add_sub') {
     let text = "";
     let ans = -1;
+    let attempts = 0;
 
-    while (ans < 0) {
+    while (ans < 0 && attempts < 100) {
+      attempts++;
       let a, b, c;
       const op1 = getOperation();
       const op2 = getOperation();

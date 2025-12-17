@@ -5,10 +5,10 @@ import json
 from dotenv import load_dotenv
 from supabase import create_client, Client
 
-# Load environment variables from the parent directory if not found in current
-# Attempting to load from potential locations
+# Load environment variables from the project root
 load_dotenv(dotenv_path='../.env') 
-load_dotenv() # Fallback to current dir
+load_dotenv(dotenv_path='./.env')  # Fallback if running from root
+load_dotenv()  # Fallback to current dir
 
 # Configuration
 URL = os.environ.get("SUPABASE_URL")

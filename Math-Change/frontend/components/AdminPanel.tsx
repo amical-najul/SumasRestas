@@ -140,12 +140,13 @@ const AdminPanel: React.FC<Props> = ({ onBack }) => {
 
   const handleSaveUser = async (e: React.FormEvent) => {
     e.preventDefault();
-    const newUser: User = editingUser ? { ...editingUser, ...formData } : {
-      id: Date.now().toString(),
-      createdAt: new Date().toISOString(),
-      settings: {},
-      unlockedLevel: 0,
-      ...formData
+    if (!editingUser) return; // Should not happen as Create is removed
+
+    const newUser: User = {
+      ...editingUser,
+      ...formData,
+      // Ensure we don't save password to DB if it's empty or legacy
+      password: formData.password || editingUser.password
     };
     await saveUser(newUser);
     setShowUserModal(false);
@@ -219,12 +220,7 @@ const AdminPanel: React.FC<Props> = ({ onBack }) => {
               className="w-full bg-black/20 border border-white/10 rounded-lg py-2 pl-10 pr-4 text-white focus:outline-none focus:border-blue-500"
             />
           </div>
-          <button
-            onClick={handleCreate}
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-medium flex items-center gap-2 transition-colors"
-          >
-            <Plus size={18} /> Crear Usuario
-          </button>
+          {/* Create User removed: Manual creation does not sync with Firebase Auth */}
         </div>
 
         {/* User Table */}
@@ -307,13 +303,7 @@ const AdminPanel: React.FC<Props> = ({ onBack }) => {
                 <label className="text-xs text-gray-400 uppercase font-bold">Email</label>
                 <input required type="email" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} className="w-full bg-black/20 border border-white/10 rounded-lg p-3 text-white focus:border-blue-500 outline-none" />
               </div>
-              <div>
-                <label className="text-xs text-gray-400 uppercase font-bold">Contraseña</label>
-                <div className="relative">
-                  <Key className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={16} />
-                  <input required={!editingUser} type="text" value={formData.password} onChange={e => setFormData({ ...formData, password: e.target.value })} className="w-full bg-black/20 border border-white/10 rounded-lg p-3 pl-10 text-white focus:border-blue-500 outline-none" placeholder={editingUser ? "Dejar igual" : "Contraseña"} />
-                </div>
-              </div>
+              {/* Password field removed: Admins cannot change user passwords directly (handled by Firebase) */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="text-xs text-gray-400 uppercase font-bold">Rol</label>

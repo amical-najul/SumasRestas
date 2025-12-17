@@ -12,6 +12,15 @@ services:
       - SUPABASE_KEY=${SUPABASE_KEY}
       - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
       - SECRET_KEY=${SECRET_KEY:-supersecretkey_change_me}
+      # S3 Configuration
+      - S3_ACCESS_KEY=${S3_ACCESS_KEY}
+      - S3_SECRET_KEY=${S3_SECRET_KEY}
+      - S3_ENDPOINT_URL=${S3_ENDPOINT_URL}
+      - S3_BUCKET_NAME=${S3_BUCKET_NAME}
+      - S3_REGION=${S3_REGION:-us-east-1}
+      # Security & CORS
+      - ENABLE_SECURITY_HEADERS=${ENABLE_SECURITY_HEADERS:-false}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-https://sumas.n8nprueba.shop}
     networks:
       - default
       - traefik_proxy
@@ -33,6 +42,12 @@ services:
       dockerfile: Dockerfile
       args:
         VITE_API_URL: https://sumas.n8nprueba.shop/api
+        VITE_FIREBASE_API_KEY: ${VITE_FIREBASE_API_KEY}
+        VITE_FIREBASE_AUTH_DOMAIN: ${VITE_FIREBASE_AUTH_DOMAIN}
+        VITE_FIREBASE_PROJECT_ID: ${VITE_FIREBASE_PROJECT_ID}
+        VITE_FIREBASE_STORAGE_BUCKET: ${VITE_FIREBASE_STORAGE_BUCKET}
+        VITE_FIREBASE_MESSAGING_SENDER_ID: ${VITE_FIREBASE_MESSAGING_SENDER_ID}
+        VITE_FIREBASE_APP_ID: ${VITE_FIREBASE_APP_ID}
     container_name: sumas-frontend
     restart: always
     depends_on:

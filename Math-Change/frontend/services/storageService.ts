@@ -39,9 +39,12 @@ async function apiRequest<T>(endpoint: string, method: string = 'GET', body?: an
 
 export const saveScore = async (record: ScoreRecord): Promise<void> => {
   try {
-    await apiRequest('/scores', 'POST', record);
+    const res = await apiRequest('/scores', 'POST', record);
+    console.log("Score saved successfully:", res);
   } catch (error) {
     console.error("Error saving score:", error);
+    // Re-throw to allow caller (App.tsx) to handle/alert
+    throw error;
   }
 };
 
@@ -176,8 +179,7 @@ export const saveUser = async (userToSave: User): Promise<void> => {
 };
 
 export const deleteUser = async (userId: string): Promise<void> => {
-  console.warn("Delete user not implemented related to Supabase yet. Requires Admin API or direct DB deletion.");
-  // Implementation depends on backend endpoint
+  await apiRequest(`/users/${userId}`, 'DELETE');
 };
 
 export const getUserByEmail = async (email: string): Promise<User | undefined> => {

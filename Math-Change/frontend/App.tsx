@@ -124,7 +124,12 @@ const App: React.FC = () => {
       difficulty: category === 'challenge' ? 'mixed' : difficulty
     };
 
-    await saveScore(record);
+    try {
+      await saveScore(record);
+    } catch (error: any) {
+      console.error("Failed to save score:", error);
+      alert(`Error guardando puntuación: ${error.message || 'Error desconocido'}`);
+    }
 
     // --- LEVEL PROGRESSION LOGIC ---
     if (currentUser && currentUser.role !== 'ADMIN') {

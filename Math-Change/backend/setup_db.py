@@ -12,7 +12,7 @@ DB_HOST = "aws-0-us-east-1.pooler.supabase.com" # Transaction pooler usually saf
 # Connection string format: postgres://[user]:[password]@[host]:[port]/[dbname]
 # User provided: 
 # Project ID: ixbgoxinxmntqcyrkusx
-# Password: Colombia1@_Sumas-Restas
+# Password: [REDACTED_FROM_GIT]
 
 DB_USER = "postgres.ixbgoxinxmntqcyrkusx"
 DB_PASSWORD = os.getenv("DB_PASSWORD")

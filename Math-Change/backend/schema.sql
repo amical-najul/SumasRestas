@@ -4,7 +4,7 @@ CREATE TABLE IF NOT EXISTS users (
     id UUID PRIMARY KEY,
     username TEXT NOT NULL,
     email TEXT UNIQUE NOT NULL,
-    password TEXT NOT NULL, -- Storing plain text as requested for simulation
+    password TEXT NOT NULL,
     role TEXT DEFAULT 'USER',
     status TEXT DEFAULT 'ACTIVE',
     avatar TEXT,

@@ -136,9 +136,6 @@ export const sendPasswordResetEmail = async (email: string): Promise<{ success: 
 /**
  * Logout current user
  */
-/**
- * Logout current user
- */
 export const logout = async (): Promise<void> => {
     await signOut(auth);
 };
