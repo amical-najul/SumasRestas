@@ -1,5 +1,29 @@
 # Historial de Cambios - Math Challenge
 
+## Versión 0.0.6 (Sincronización Híbrida y Refinamiento UI)
+
+### 🔄 Sincronización y Persistencia (Hybrid Sync)
+*   **Modelo de Datos Híbrido:** Integración completa entre **Firebase Authentication** (Seguridad) y **Supabase DB** (Perfil y Datos).
+*   **Sincronización de Perfil:**
+    *   La actualización de Email y Contraseña en "Mi Perfil" ahora se propaga automáticamente a Firebase Auth.
+    *   Soporte para re-autenticación automática en operaciones sensibles.
+*   **Corrección Lógica de IDs:** Solución al bug de estadísticas faltantes forzando la generación de UUIDs para puntuaciones en el backend.
+
+### 🎨 Refinamiento Visual (Premium UI)
+*   **Login Screen Rediseñado:**
+    *   Nuevo fondo con gradiente radial limpio (`slate-700` a `black`), eliminando elementos distractores.
+    *   Tarjeta de Login con fondo más oscuro (`bg-black/20`) para mejorar el contraste y legibilidad.
+*   **Homogeneidad UI:** Unificación de estilos en todas las pantallas (Bienvenida, Perfil, Resultados) bajo el tema "Dark Glassmorphism".
+
+### ☁️ Infraestructura y Almacenamiento
+*   **Avatar Upload (S3/MinIO):**
+    *   Implementación robusta de subida de imágenes con `boto3`.
+    *   Corrección de configuración Docker para inyectar credenciales S3 desde el host (Solución a `NoSuchBucket`).
+    *   Validación de tipos de archivo y manejo de errores detallado.
+*   **Backend Hardening:** Mejora en la robustez de `main.py` para manejar variables de entorno faltantes sin crashear.
+
+---
+
 ## Versión 0.0.5 (Seguridad y Estabilidad)
 
 ### 🔒 Hardening de Seguridad

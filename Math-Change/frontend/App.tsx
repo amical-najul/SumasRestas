@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { GameScreenState, GameStats, GameCategory, ScoreRecord, Difficulty, User } from './types';
 import WelcomeScreen from './components/WelcomeScreen';
 import GameScreen from './components/GameScreen';
@@ -9,7 +8,9 @@ import StudyTablesScreen from './components/StudyTablesScreen';
 import LoginScreen from './components/LoginScreen';
 import ProfileScreen from './components/ProfileScreen';
 import AdminPanel from './components/AdminPanel';
-import { saveScore, saveUser, getSession, clearSession } from './services/storageService';
+import { saveScore, saveUser, getCurrentUserFull } from './services/storageService';
+import * as firebaseAuth from './services/firebaseAuthService';
+import { User as FirebaseUser } from 'firebase/auth';
 
 const App: React.FC = () => {
   // Start at LOGIN screen
@@ -23,14 +24,45 @@ const App: React.FC = () => {
   const [difficulty, setDifficulty] = useState<Difficulty>('medium');
   const [gameStats, setGameStats] = useState<GameStats | null>(null);
 
-  // Auto-Restore Session
-  React.useEffect(() => {
-    const { user, token } = getSession();
-    if (user && token) {
-      setCurrentUser(user);
-      setUsername(user.username);
-      setScreen(GameScreenState.WELCOME);
-    }
+  // Auto-Restore Session with Firebase Auth State
+  useEffect(() => {
+    const unsubscribe = firebaseAuth.onAuthStateChange(async (firebaseUser: FirebaseUser | null) => {
+      if (firebaseUser && firebaseUser.emailVerified) {
+        try {
+          // Sync with Backend to get Level/Avatar/Settings
+          const dbUser = await getCurrentUserFull();
+          setCurrentUser(dbUser);
+          setUsername(dbUser.username);
+        } catch (error) {
+          console.error("Error syncing user profile:", error);
+          // Fallback: Use basic Firebase info if backend fails
+          const fallbackUser: User = {
+            id: firebaseUser.uid,
+            username: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'Usuario',
+            email: firebaseUser.email || '',
+            password: '',
+            role: 'USER',
+            status: 'ACTIVE',
+            createdAt: new Date().toISOString(),
+            settings: {},
+            unlockedLevel: 0
+          };
+          setCurrentUser(fallbackUser);
+          setUsername(fallbackUser.username);
+        }
+        setScreen(GameScreenState.WELCOME);
+      } else {
+        // User is signed out or email not verified
+        setCurrentUser(null);
+        setUsername('');
+        if (screen !== GameScreenState.LOGIN) {
+          setScreen(GameScreenState.LOGIN);
+        }
+      }
+    });
+
+    // Cleanup subscription on unmount
+    return () => unsubscribe();
   }, []);
 
   // Difficulty Mapping for Progression
@@ -49,8 +81,8 @@ const App: React.FC = () => {
     setScreen(GameScreenState.WELCOME);
   };
 
-  const handleLogout = () => {
-    clearSession();
+  const handleLogout = async () => {
+    await firebaseAuth.logout();
     setCurrentUser(null);
     setUsername('');
     setScreen(GameScreenState.LOGIN);

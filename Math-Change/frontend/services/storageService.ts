@@ -1,33 +1,15 @@
 import { ScoreRecord, User, UserRole } from '../types';
+import { getIdToken } from './firebaseAuthService';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
-// --- TOKEN MANAGEMENT ---
-const TOKEN_KEY = 'auth_token';
-const USER_KEY = 'auth_user';
+// --- FIREBASE TOKEN MANAGEMENT ---
+// Deprecated: We now obtain token directly from Firebase SDK per request to ensure freshness
 
-export const setSession = (token: string, user: User) => {
-  localStorage.setItem(TOKEN_KEY, token);
-  localStorage.setItem(USER_KEY, JSON.stringify(user));
-};
-
-export const getSession = (): { token: string | null; user: User | null } => {
-  const token = localStorage.getItem(TOKEN_KEY);
-  const userStr = localStorage.getItem(USER_KEY);
-  return {
-    token,
-    user: userStr ? JSON.parse(userStr) : null
-  };
-};
-
-export const clearSession = () => {
-  localStorage.removeItem(TOKEN_KEY);
-  localStorage.removeItem(USER_KEY);
-};
-
-// HELPER with Auth
+// HELPER with Firebase Auth
 async function apiRequest<T>(endpoint: string, method: string = 'GET', body?: any): Promise<T> {
-  const { token } = getSession();
+  // Always get a fresh token from the SDK
+  const token = await getIdToken();
 
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
@@ -46,9 +28,6 @@ async function apiRequest<T>(endpoint: string, method: string = 'GET', body?: an
   const response = await fetch(`${API_URL}${endpoint}`, config);
 
   if (!response.ok) {
-    if (response.status === 401) {
-      // Optional: clearSession(); // if token expired
-    }
     const err = await response.json().catch(() => ({}));
     throw new Error(err.detail || err.message || 'API Error');
   }
@@ -216,38 +195,42 @@ export const getUserByEmail = async (email: string): Promise<User | undefined> =
   } catch (e) { return undefined; }
 };
 
-// --- AUTH SERVICES ---
-
-export const loginUser = async (email: string, password: string): Promise<{ success: boolean; user?: User; message?: string }> => {
-  try {
-    const data = await apiRequest<any>('/login', 'POST', { email, password });
-    if (data.success && data.token) {
-      setSession(data.token, data.user); // PERSISTENCE
-      return { success: true, user: data.user };
-    }
-    return { success: false, message: data.message || "Login failed" };
-  } catch (e: any) {
-    return { success: false, message: e.message || "Error de conexión" };
-  }
-};
-
-export const registerUser = async (username: string, email: string, password: string): Promise<{ success: boolean; user?: User; message?: string }> => {
-  try {
-    // New User creation is handled by backend which assigns ID and Dates
-    const dummyUser = { username, email, password }; // Backend expects UserCreate structure
-    const data = await apiRequest<any>('/register', 'POST', dummyUser);
-    if (data.success && data.token) {
-      setSession(data.token, data.user); // PERSISTENCE
-      return { success: true, user: data.user };
-    }
-    return { success: false, message: data.message || "Error al registrar" };
-  } catch (e: any) {
-    return { success: false, message: e.message || "Error de conexión" };
-  }
-};
-
 // --- ANALYTICS HELPERS ---
 export const getStorageUsage = (): string => {
   return "Cloud";
 };
+
+// --- NEW AUTH & AVATAR METHODS ---
+
+// Fetch full user profile from backend (includes unlockedLevel, avatar, settings)
+export const getCurrentUserFull = async (): Promise<User> => {
+  return await apiRequest<User>('/users/me');
+};
+
+// Upload User Avatar
+export const uploadAvatar = async (file: File): Promise<string> => {
+  const token = await getIdToken();
+  if (!token) throw new Error('Usuario no autenticado');
+
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const response = await fetch(`${API_URL}/upload-avatar`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      // Do NOT set Content-Type header manually for FormData, browser does it with boundary
+    },
+    body: formData
+  });
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new Error(err.detail || 'Error subiendo imagen');
+  }
+
+  const result = await response.json();
+  return result.url;
+};
+
 

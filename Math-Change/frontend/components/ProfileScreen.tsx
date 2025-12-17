@@ -1,7 +1,8 @@
 
 import React, { useState, useRef } from 'react';
 import { User, Difficulty } from '../types';
-import { saveUser } from '../services/storageService';
+import { saveUser, uploadAvatar } from '../services/storageService';
+import { updateUserEmail, updateUserPassword } from '../services/firebaseAuthService';
 import { ArrowLeft, Camera, Save, Settings, User as UserIcon, Clock } from 'lucide-react';
 
 interface Props {
@@ -22,22 +23,38 @@ const ProfileScreen: React.FC<Props> = ({ user, onUpdateUser, onBack }) => {
   const [message, setMessage] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const [uploading, setUploading] = useState(false);
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 500000) { // 500KB limit
-        setMessage('La imagen es demasiado grande (Máx 500KB)');
+      if (file.size > 5 * 1024 * 1024) { // 5MB limit
+        setMessage('La imagen es demasiado grande (Máx 5MB)');
         return;
       }
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setFormData(prev => ({ ...prev, avatar: reader.result as string }));
-      };
-      reader.readAsDataURL(file);
+
+      try {
+        setUploading(true);
+        setMessage('Subiendo imagen...');
+        const url = await uploadAvatar(file);
+        setFormData(prev => ({ ...prev, avatar: url }));
+        setMessage('Imagen cargada. Pulsa "Guardar" para confirmar.');
+      } catch (error: any) {
+        console.error("Error detallado al subir imagen:", error);
+        let errorMsg = 'Error desconocido al subir imagen.';
+        if (error instanceof Error) {
+          errorMsg = error.message;
+        } else if (typeof error === 'object' && error?.detail) {
+          errorMsg = error.detail;
+        }
+        setMessage(`Error: ${errorMsg}`);
+      } finally {
+        setUploading(false);
+      }
     }
   };
 
@@ -46,11 +63,36 @@ const ProfileScreen: React.FC<Props> = ({ user, onUpdateUser, onBack }) => {
   };
 
   const handleSave = async () => {
+    setMessage('Guardando cambios...');
+
+    // 1. Sync with Firebase Auth (Critical Data)
+    if (formData.email !== user.email) {
+      const res = await updateUserEmail(formData.email);
+      if (!res.success) {
+        setMessage(`Error actualizando email: ${res.message}`);
+        return; // Stop if Auth fails
+      }
+    }
+
+    // Password Update (Only if changed and not empty)
+    // Note: user.password is usually empty from backend, so check if formData.password has valid length
+    if (formData.password && formData.password !== user.password && formData.password.length >= 6) {
+      const res = await updateUserPassword(formData.password);
+      if (!res.success) {
+        setMessage(`Error actualizando contraseña: ${res.message}`);
+        return;
+      }
+    } else if (formData.password && formData.password.length < 6) {
+      setMessage('La contraseña debe tener al menos 6 caracteres');
+      return;
+    }
+
+    // 2. Save to Backend (Profile Data)
     const updatedUser: User = {
       ...user,
       username: formData.username,
       email: formData.email,
-      password: formData.password,
+      password: formData.password, // Syncs to local DB too
       avatar: formData.avatar,
       settings: {
         ...user.settings,
@@ -60,7 +102,7 @@ const ProfileScreen: React.FC<Props> = ({ user, onUpdateUser, onBack }) => {
 
     await saveUser(updatedUser);
     onUpdateUser(updatedUser);
-    setMessage('¡Perfil actualizado con éxito!');
+    setMessage('¡Perfil y Credenciales actualizados con éxito!');
     setTimeout(() => setMessage(''), 3000);
   };
 

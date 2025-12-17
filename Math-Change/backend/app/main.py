@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Body, Depends
+from fastapi import FastAPI, HTTPException, Body, Depends, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from typing import List, Optional
 import os
@@ -11,6 +11,16 @@ from .database import supabase
 from .auth import verify_password, get_password_hash, create_access_token, ACCESS_TOKEN_EXPIRE_MINUTES, get_current_user, get_admin_user
 from datetime import datetime, timedelta
 import uuid
+import boto3
+from botocore.exceptions import NoCredentialsError
+
+load_dotenv()
+
+# S3 Configuration
+S3_ACCESS_KEY = os.environ.get("S3_ACCESS_KEY") or "cAFCcfOBJq6zGpSTbMdY"
+S3_SECRET_KEY = os.environ.get("S3_SECRET_KEY") or "76IKIdydcYkA73kqEdUWHedobYDXgp2PL7AmnjIg"
+S3_ENDPOINT_URL = os.environ.get("S3_ENDPOINT_URL") or "https://files.n8nprueba.shop"
+S3_BUCKET_NAME = os.environ.get("S3_BUCKET_NAME") or "suma-resta"
 
 load_dotenv()
 
@@ -157,8 +167,71 @@ def get_scores(user: Optional[str] = None):
 @app.post("/scores")
 def save_score(record: ScoreRecord, current_user: dict = Depends(get_current_user)):
     data = record.dict()
-    if not data.get("id"):
-        data["id"] = str(uuid.uuid4())
+    # FORCE UUID: Frontend sends timestamp (Date.now()) which may fail if DB expects UUID
+    data["id"] = str(uuid.uuid4())
         
-    res = supabase.table("scores").insert(data).execute()
-    return res.data[0] if res.data else {}
+    print(f"DEBUG: Attempting to save score: {data}")
+    
+    try:
+        res = supabase.table("scores").insert(data).execute()
+        print(f"DEBUG: Save score success: {res.data}")
+        return res.data[0] if res.data else {}
+    except Exception as e:
+        print(f"ERROR: Failed to save score: {e}")
+        # Continue to raise HTTP exception so frontend handles it? 
+        # Or return empty to avoid crash? Better to raise to see in Network tab.
+        raise HTTPException(status_code=500, detail=f"Database Insert Error: {str(e)}")
+
+# --- CURRENT USER & AVATAR ---
+
+@app.get("/users/me")
+def get_me(current_user: dict = Depends(get_current_user)):
+    return current_user
+
+@app.post("/upload-avatar")
+async def upload_avatar(file: UploadFile = File(...), current_user: dict = Depends(get_current_user)):
+    # Validate file type
+    if not file.content_type.startswith('image/'):
+        raise HTTPException(status_code=400, detail="Solo se permiten imágenes")
+
+    # Generate unique filename
+    file_extension = file.filename.split(".")[-1] if "." in file.filename else "jpg"
+    filename = f"{current_user['id']}_{uuid.uuid4()}.{file_extension}"
+    
+    # DEBUG LOGS
+    print(f"DEBUG: Starting upload for user {current_user['id']}")
+    print(f"DEBUG: Bucket={S3_BUCKET_NAME}, Endpoint={S3_ENDPOINT_URL}")
+    print(f"DEBUG: Key (first 5 chars)={S3_ACCESS_KEY[:5]}...")
+
+    s3 = boto3.client('s3',
+                      endpoint_url=S3_ENDPOINT_URL,
+                      aws_access_key_id=S3_ACCESS_KEY,
+                      aws_secret_access_key=S3_SECRET_KEY,
+                      region_name=os.environ.get("S3_REGION", "us-east-1")) # Use env region
+
+    try:
+        # Upload
+        s3.upload_fileobj(
+            file.file,
+            S3_BUCKET_NAME,
+            filename,
+            ExtraArgs={'ACL': 'public-read', 'ContentType': file.content_type}
+        )
+        
+        # Construct URL
+        url = f"{S3_ENDPOINT_URL}/{S3_BUCKET_NAME}/{filename}"
+        print(f"DEBUG: Upload success: {url}")
+        
+        # Update User in DB
+        res = supabase.table("users").update({"avatar": url}).eq("id", current_user["id"]).execute()
+        
+        return {"success": True, "url": url}
+        
+    except NoCredentialsError:
+        print("ERROR: S3 Credentials Error")
+        raise HTTPException(status_code=500, detail="Error de credenciales S3")
+    except Exception as e:
+        print(f"ERROR: Upload error details: {e}")
+        # Return specific error to help user debug
+        raise HTTPException(status_code=500, detail=f"Error subiendo imagen ({type(e).__name__}): {str(e)}")
+
