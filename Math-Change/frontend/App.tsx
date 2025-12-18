@@ -135,37 +135,30 @@ const App: React.FC = () => {
     if (currentUser && currentUser.role !== 'ADMIN') {
       const currentDiffIndex = difficultyOrder.indexOf(difficulty);
 
-      // Calculate current max unlocked level for this specific category
-      const currentUnlocked = currentUser.settings?.unlockedLevels?.[category] ?? currentUser.unlockedLevel ?? 0;
+      // Note: We don't need to check currentUnlocked strictly here because the API endpoints
+      // in 'unlockLevel' handle the "don't downgrade" logic. 
+      // We just need to know IF they passed a level that SHOULD unlock the next one.
 
-      // If user played the level corresponding to their max unlocked level for this category
-      if (currentDiffIndex !== -1 && currentDiffIndex === currentUnlocked) {
-        // Check if there is a next level
-        if (currentDiffIndex < difficultyOrder.length - 1) {
-          // Determine if pass? Let's say score >= 60%
-          if (score >= 60) {
+      // If user passed this difficulty (and presumably it was their max or lower)
+      if (currentDiffIndex !== -1 && currentDiffIndex < difficultyOrder.length - 1) {
+        // Determine if pass? Let's say score >= 60%
+        if (score >= 60) {
+          const nextLevel = currentDiffIndex + 1;
 
-            // Update the map for this category
-            const newUnlockedLevels = {
-              ...(currentUser.settings.unlockedLevels || {}),
-              [category]: currentDiffIndex + 1
-            };
+          // Call API to attempt unlock
+          // The backend guarantees it only updates if newLevel > currentLevel
+          import('./services/storageService').then(service => {
+            service.unlockLevel(category, nextLevel);
+          });
 
-            const updatedUser: User = {
-              ...currentUser,
-              settings: {
-                ...currentUser.settings,
-                unlockedLevels: newUnlockedLevels
-              },
-              // Also update global legacy level just in case, taking the max of all categories or just existing behavior
-              // For safety/backward compat, let's keep unlockedLevel as max of any category? 
-              // Or just keep it as is. Let's maximize it to avoid regressions.
-              unlockedLevel: Math.max(currentUser.unlockedLevel, currentDiffIndex + 1)
-            };
-
-            await saveUser(updatedUser);
-            setCurrentUser(updatedUser);
-          }
+          // We can optimistic update local currentUser if we want, but since we use
+          // WelcomeScreen to fetch progress, we might just rely on that.
+          // For Global Legacy 'unlockedLevel' update (Visual feedback immediately if used)
+          const updatedUser: User = {
+            ...currentUser,
+            unlockedLevel: Math.max(currentUser.unlockedLevel, nextLevel)
+          };
+          setCurrentUser(updatedUser);
         }
       }
     }

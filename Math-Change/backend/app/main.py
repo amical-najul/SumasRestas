@@ -129,14 +129,93 @@ def save_score(record: ScoreRecord, current_user: dict = Depends(get_current_use
     print(f"DEBUG: Attempting to save score: {data}")
     
     try:
+        # 1. Save Score Record
         res = supabase.table("scores").insert(data).execute()
         print(f"DEBUG: Save score success: {res.data}")
+        
+        # 2. Upsert Category Progress (Stats)
+        # We need the user ID. 'current_user' has it.
+        user_id = current_user.get("id")
+        category = record.category
+        
+        if user_id and category:
+            # Calculate stats to add
+            # Note: Postgres upsert needs to handle the increment. 
+            # Supabase/PostgREST doesn't support "increment on conflict" easily in one call via JS client syntax usually,
+            # BUT we can call a stored procedure OR do two steps (read, calc, update).
+            # For simplicity and robustness without migration of SPs, we will do Read-Modify-Write transaction logic here.
+            # Ideally, RLS or DB Trigger is best, but we are doing logic in API.
+            
+            # Fetch existing
+            existing = supabase.table("user_category_progress").select("*").eq("user_id", user_id).eq("category", category).execute()
+            
+            current_stats = existing.data[0] if existing.data else {
+                "user_id": user_id,
+                "category": category,
+                "total_games": 0,
+                "total_score": 0,
+                "total_correct": 0,
+                "total_errors": 0,
+                "total_time_seconds": 0.0,
+                "unlocked_level": 0
+            }
+            
+            # Update values
+            new_stats = {
+                "user_id": user_id,
+                "category": category,
+                "total_games": current_stats.get("total_games", 0) + 1,
+                "total_score": current_stats.get("total_score", 0) + record.score,
+                "total_correct": current_stats.get("total_correct", 0) + record.correctCount,
+                "total_errors": current_stats.get("total_errors", 0) + record.errorCount,
+                "total_time_seconds": current_stats.get("total_time_seconds", 0.0) + (record.avgTime * (record.correctCount + record.errorCount)), # approx total time
+                "last_played_at": datetime.utcnow().isoformat()
+            }
+            
+            # Preserve unlocked_level if not provided (it is handled by separate endpoint usually, but let's keep it safe)
+            if "unlocked_level" not in new_stats and "unlocked_level" in current_stats:
+                new_stats["unlocked_level"] = current_stats["unlocked_level"]
+                
+            # Upsert
+            supabase.table("user_category_progress").upsert(new_stats, on_conflict="user_id, category").execute()
+
         return res.data[0] if res.data else {}
     except Exception as e:
         print(f"ERROR: Failed to save score: {e}")
         # Continue to raise HTTP exception so frontend handles it? 
         # Or return empty to avoid crash? Better to raise to see in Network tab.
         raise HTTPException(status_code=500, detail=f"Database Insert Error: {str(e)}")
+
+@app.get("/users/me/progress")
+def get_my_progress(current_user: dict = Depends(get_current_user)):
+    user_id = current_user.get("id")
+    res = supabase.table("user_category_progress").select("*").eq("user_id", user_id).execute()
+    return res.data
+
+from .models import CategoryLevelUpdate
+@app.patch("/users/me/progress/level")
+def update_level_progress(update: CategoryLevelUpdate, current_user: dict = Depends(get_current_user)):
+    user_id = current_user.get("id")
+    
+    # Check existing to ensure we don't downgrade
+    existing = supabase.table("user_category_progress").select("unlocked_level").eq("user_id", user_id).eq("category", update.category).execute()
+    
+    current_level = 0
+    if existing.data:
+        current_level = existing.data[0].get("unlocked_level", 0)
+    
+    if update.new_level > current_level:
+        data = {
+            "user_id": user_id,
+            "category": update.category,
+            "unlocked_level": update.new_level,
+            "updated_at": datetime.utcnow().isoformat()
+        }
+        # Upsert to handle if row doesn't exist yet
+        res = supabase.table("user_category_progress").upsert(data, on_conflict="user_id, category").execute()
+        return res.data
+    
+    return {"message": "Level not updated (already higher or equal)"}
 
 @app.delete("/scores")
 def delete_scores(scope: str = "all", current_user: dict = Depends(get_current_user)):

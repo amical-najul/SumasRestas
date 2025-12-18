@@ -68,3 +68,15 @@ export interface User {
   settings: UserSettings;
   unlockedLevel: number; // 0=Easy, 1=EasyMedium, etc. (Max 4)
 }
+
+export interface CategoryProgress {
+  category: string;
+  unlocked_level: number;
+  total_games: number;
+  total_score: number;
+  total_correct: number;
+  total_errors: number;
+  total_time_seconds: number;
+  accuracy_rate?: number;
+  avg_response_time?: number;
+}

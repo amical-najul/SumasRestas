@@ -45,3 +45,18 @@ class ScoreRecord(BaseModel):
     date: str
     category: Optional[str] = None
     difficulty: Optional[str] = None
+
+class CategoryProgress(BaseModel):
+    category: str
+    unlocked_level: int = 0
+    total_games: int = 0
+    total_score: int = 0
+    total_correct: int = 0
+    total_errors: int = 0
+    total_time_seconds: float = 0.0
+    accuracy_rate: Optional[float] = 0.0
+    avg_response_time: Optional[float] = 0.0
+
+class CategoryLevelUpdate(BaseModel):
+    category: str
+    new_level: int

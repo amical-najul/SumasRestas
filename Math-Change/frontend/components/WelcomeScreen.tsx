@@ -20,10 +20,21 @@ const WelcomeScreen: React.FC<Props> = ({ user, onStart, onLeaderboard, onStudy,
   const [difficulty, setDifficulty] = useState<Difficulty>('medium');
   const [imgError, setImgError] = useState(false);
 
+  const [progress, setProgress] = useState<import('../types').CategoryProgress[]>([]);
+
+  // Fetch progress on mount/user change
+  useEffect(() => {
+    if (user && user.role !== 'ADMIN') {
+      import('../services/storageService').then(service => {
+        service.getUserProgress().then(setProgress);
+      });
+    }
+  }, [user]);
+
   // Sync unlocked level logic
   // Difficulty Order: Easy(0), EasyMedium(1), Medium(2), MedHard(3), Hard(4)
   // Guests have all unlocked by default, Admins have all unlocked.
-  // Standard Users use user.unlockedLevel
+  // Standard Users use API progress data
 
   const difficultyOrder: Difficulty[] = ['easy', 'easy_medium', 'medium', 'medium_hard', 'hard'];
 
@@ -32,9 +43,10 @@ const WelcomeScreen: React.FC<Props> = ({ user, onStart, onLeaderboard, onStudy,
     if (user && user.role !== 'ADMIN') {
       const currentIdx = difficultyOrder.indexOf(difficulty);
 
-      // Independent Level Logic
-      // Priority: user.settings.unlockedLevels[category] > user.unlockedLevel (legacy global)
-      const catLevel = user.settings?.unlockedLevels?.[selectedCategory] ?? user.unlockedLevel ?? 0;
+      // Independent Level Logic via API
+      const catProgress = progress.find(p => p.category === selectedCategory);
+      // Fallback to legacy or 0
+      const catLevel = catProgress?.unlocked_level ?? user.unlockedLevel ?? 0;
 
       if (currentIdx > catLevel) {
         setDifficulty('easy');
@@ -42,7 +54,7 @@ const WelcomeScreen: React.FC<Props> = ({ user, onStart, onLeaderboard, onStudy,
     }
     if (user) setUsername(user.username);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, difficulty, selectedCategory]);
+  }, [user, difficulty, selectedCategory, progress]);
 
   const handleStart = () => {
     const finalName = username.trim() || "Usuario";
@@ -80,8 +92,10 @@ const WelcomeScreen: React.FC<Props> = ({ user, onStart, onLeaderboard, onStudy,
     if (!user) return false; // Guests have all unlocked
     if (user.role === 'ADMIN') return false; // Admins have all unlocked
 
-    // Independent Level Logic
-    const catLevel = user.settings?.unlockedLevels?.[selectedCategory] ?? user.unlockedLevel ?? 0;
+    // Independent Level Logic via API
+    const catProgress = progress.find(p => p.category === selectedCategory);
+    // Fallback to legacy global level for smooth transition if API returns empty
+    const catLevel = catProgress?.unlocked_level ?? user.unlockedLevel ?? 0;
 
     return levelIndex > catLevel;
   };

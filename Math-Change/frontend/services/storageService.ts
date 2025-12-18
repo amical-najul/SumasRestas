@@ -243,4 +243,23 @@ export const uploadAvatar = async (file: File): Promise<string> => {
   return result.url;
 };
 
+// --- PROGRESS MANAGEMENT (NEW) ---
+
+export const getUserProgress = async (): Promise<import('../types').CategoryProgress[]> => {
+  try {
+    return await apiRequest<import('../types').CategoryProgress[]>('/users/me/progress');
+  } catch (error) {
+    console.error("Error fetching progress:", error);
+    return [];
+  }
+};
+
+export const unlockLevel = async (category: import('../types').GameCategory, newLevel: number): Promise<void> => {
+  try {
+    await apiRequest('/users/me/progress/level', 'PATCH', { category, new_level: newLevel });
+  } catch (error) {
+    console.error("Error unlocking level:", error);
+  }
+};
+
 
