@@ -150,15 +150,7 @@ const App: React.FC = () => {
           import('./services/storageService').then(service => {
             service.unlockLevel(category, nextLevel);
           });
-
-          // We can optimistic update local currentUser if we want, but since we use
-          // WelcomeScreen to fetch progress, we might just rely on that.
-          // For Global Legacy 'unlockedLevel' update (Visual feedback immediately if used)
-          const updatedUser: User = {
-            ...currentUser,
-            unlockedLevel: Math.max(currentUser.unlockedLevel, nextLevel)
-          };
-          setCurrentUser(updatedUser);
+          // Note: No longer updating global unlockedLevel to keep categories independent
         }
       }
     }

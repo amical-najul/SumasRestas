@@ -45,8 +45,8 @@ const WelcomeScreen: React.FC<Props> = ({ user, onStart, onLeaderboard, onStudy,
 
       // Independent Level Logic via API
       const catProgress = progress.find(p => p.category === selectedCategory);
-      // Fallback to legacy or 0
-      const catLevel = catProgress?.unlocked_level ?? user.unlockedLevel ?? 0;
+      // No fallback to global level - each category starts at 0
+      const catLevel = catProgress?.unlocked_level ?? 0;
 
       if (currentIdx > catLevel) {
         setDifficulty('easy');
@@ -94,8 +94,8 @@ const WelcomeScreen: React.FC<Props> = ({ user, onStart, onLeaderboard, onStudy,
 
     // Independent Level Logic via API
     const catProgress = progress.find(p => p.category === selectedCategory);
-    // Fallback to legacy global level for smooth transition if API returns empty
-    const catLevel = catProgress?.unlocked_level ?? user.unlockedLevel ?? 0;
+    // No fallback to global level - each category starts at 0
+    const catLevel = catProgress?.unlocked_level ?? 0;
 
     return levelIndex > catLevel;
   };
