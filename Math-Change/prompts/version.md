@@ -1,5 +1,25 @@
 # Historial de Cambios - Math Challenge
 
+## Versión 0.0.8 (Progreso y Estadísticas Mejoradas)
+
+### 📊 Nueva Pantalla "Mi Progreso"
+*   **Rediseño Completo:** La pantalla de estadísticas ahora muestra un resumen general (partidas, promedio, correctas) y tarjetas por categoría jugada.
+*   **Historial Expandible:** Click en cualquier categoría para ver las últimas 10 partidas con nivel, puntaje y fecha.
+*   **Borrado Individual:** Cada partida puede ser eliminada con un botón, y las estadísticas se recalculan automáticamente.
+
+### 🔒 Progresión Independiente por Categoría
+*   **Auto-Migración Backend:** Al acceder a "Mi Progreso", el sistema detecta y migra automáticamente el historial de la tabla `scores` a `user_category_progress` para usuarios existentes.
+*   **Sin Niveles Cruzados:** Los niveles desbloqueados en una categoría ya no afectan a otras.
+
+### 🖼️ Corrección de Avatares
+*   **Sintaxis Backend Reparada:** Solucionado error de Python que impedía el arranque del servidor.
+*   **Configuración MinIO:** Bucket `suma-resta` configurado como público para permitir visualización de avatares.
+
+### 🗑️ Limpieza de UI
+*   **Zona de Peligro Eliminada:** Removida la opción de borrar todo el historial desde el perfil.
+
+---
+
 ## Versión 0.0.7 (Refinamiento Estético de Login)
 
 ### 🎨 Harmonización Visual

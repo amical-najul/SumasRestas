@@ -325,6 +325,9 @@ def delete_score_by_id(score_id: str, current_user: dict = Depends(get_current_u
     except HTTPException as he:
         raise he
     except Exception as e:
+        print(f"Error deleting score {score_id}: {e}")
+        raise HTTPException(status_code=500, detail=f"Error eliminando: {str(e)}")
+
 # --- CURRENT USER & AVATAR ---
 
 @app.get("/users/me")
@@ -386,45 +389,15 @@ async def upload_avatar(file: UploadFile = File(...), current_user: dict = Depen
             buffer,
             S3_BUCKET_NAME,
             filename,
-            ExtraArgs={'ContentType': content_type} # ACL='public-read' sometimes fails if not enabled on bucket
+            ExtraArgs={'ContentType': content_type}
         )
-                else:
-                    s3.create_bucket(
-                        Bucket=S3_BUCKET_NAME,
-                        CreateBucketConfiguration={'LocationConstraint': region}
-                    )
-                print(f"INFO: Bucket {S3_BUCKET_NAME} created successfully.")
-                
-                # Reset file pointer
-                buffer.seek(0)
-                
-                # Retry Upload
-                s3.upload_fileobj(
-                    buffer,
-                    S3_BUCKET_NAME,
-                    filename,
-                    ExtraArgs={'ACL': 'public-read', 'ContentType': content_type}
-                )
-            except Exception as create_err:
-                 print(f"CRITICAL: Failed to auto-create bucket: {create_err}")
-                 raise HTTPException(status_code=500, detail=f"Error fatal S3: No existe el bucket y no se pudo crear: {str(create_err)}")
-        else:
-             print(f"ERROR: Upload error details: {e}")
-             raise HTTPException(status_code=500, detail=f"Error subiendo imagen ({type(e).__name__}): {str(e)}")
-
-    # Construct URL
-    # FIX: Ensure URL is accessible. If using MinIO/Local S3, path style is safer.
-    # Check if endpoint already ends with slash to avoid double slash
-    base_url = S3_ENDPOINT_URL.rstrip('/')
-    url = f"{base_url}/{S3_BUCKET_NAME}/{filename}"
-    print(f"DEBUG: Upload success: {url}")
-    
-    # Update User in DB
-    try:
-        res = supabase.table("users").update({"avatar": url}).eq("id", current_user["id"]).execute()
-    except Exception as db_err:
-         print(f"WARN: Failed to update user profile in DB: {db_err}")
-         # Attempt to return success anyway if upload worked
-    
-    return {"success": True, "url": url}
-
+        
+        # Construct URL
+        base_url = S3_ENDPOINT_URL.rstrip('/')
+        url = f"{base_url}/{S3_BUCKET_NAME}/{filename}"
+        print(f"DEBUG: Upload success: {url}")
+        return {"success": True, "url": url}
+        
+    except Exception as e:
+        print(f"CRITICAL S3 ERROR: {e}")
+        raise HTTPException(status_code=500, detail=f"Error subiendo imagen: {str(e)}")
