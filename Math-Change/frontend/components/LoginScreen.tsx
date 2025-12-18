@@ -289,7 +289,7 @@ const LoginScreen: React.FC<Props> = ({ onLoginSuccess, onGuestPlay }) => {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-[#1e293b] via-[#0f172a] to-black p-4 relative overflow-hidden font-outfit">
+    <div className="w-full max-w-4xl flex justify-center items-center relative z-10 min-h-[600px] font-outfit">
       {/* Clean Radial Gradient matching reference image - No Orbs */}
 
       {/* Main Container */}
@@ -306,7 +306,7 @@ const LoginScreen: React.FC<Props> = ({ onLoginSuccess, onGuestPlay }) => {
         </div>
 
         {/* Auth Card */}
-        <div className="bg-black/20 backdrop-blur-xl border border-white/10 p-8 rounded-3xl w-full shadow-2xl">
+        <div className="bg-slate-900 backdrop-blur-xl border border-white/10 p-8 rounded-3xl w-full shadow-2xl">
           {/* Header title removed as requested */}
 
           <form onSubmit={handleSubmit} className="space-y-4">

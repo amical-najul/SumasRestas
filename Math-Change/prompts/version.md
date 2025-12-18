@@ -1,5 +1,17 @@
 # Historial de Cambios - Math Challenge
 
+## Versión 0.0.7 (Refinamiento Estético de Login)
+
+### 🎨 Harmonización Visual
+*   **Estandarización de Contenedores:**
+    *   **LoginScreen Root:** Se ha eliminado el fondo propio para hacerlo 100% transparente y sin bordes, heredando la estructura exacta del `App Inner Wrapper`.
+    *   **Auth Card:** Cambio de estilo de fondo: de gradiente a color solido sobrio (`bg-slate-900`), mejorando la integración con el tema oscuro.
+*   **Depuración de Estilos:**
+    *   Eliminación de redundancias en las clases de Tailwind.
+    *   Pruebas de visualización y contraste en contenedores principales.
+
+---
+
 ## Versión 0.0.6 (Sincronización Híbrida y Refinamiento UI)
 
 ### 🔄 Sincronización y Persistencia (Hybrid Sync)
