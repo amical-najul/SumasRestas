@@ -189,7 +189,66 @@ def save_score(record: ScoreRecord, current_user: dict = Depends(get_current_use
 @app.get("/users/me/progress")
 def get_my_progress(current_user: dict = Depends(get_current_user)):
     user_id = current_user.get("id")
+    username = current_user.get("username")
+    
     res = supabase.table("user_category_progress").select("*").eq("user_id", user_id).execute()
+    
+    # AUTO-MIGRATION: If no progress records but user has scores, calculate from history
+    if not res.data and username:
+        scores_res = supabase.table("scores").select("*").ilike("user", username).execute()
+        
+        if scores_res.data:
+            # Group scores by category and calculate stats
+            category_stats = {}
+            difficulty_order = ['easy', 'easy_medium', 'medium', 'medium_hard', 'hard']
+            
+            for score in scores_res.data:
+                cat = score.get("category")
+                if not cat:
+                    continue
+                    
+                if cat not in category_stats:
+                    category_stats[cat] = {
+                        "total_games": 0,
+                        "total_score": 0,
+                        "total_correct": 0,
+                        "total_errors": 0,
+                        "max_difficulty_passed": -1  # Track highest difficulty with >= 60%
+                    }
+                
+                stats = category_stats[cat]
+                stats["total_games"] += 1
+                stats["total_score"] += score.get("score", 0)
+                stats["total_correct"] += score.get("correctCount", 0)
+                stats["total_errors"] += score.get("errorCount", 0)
+                
+                # Check if this score unlocks a level (>= 60%)
+                if score.get("score", 0) >= 60:
+                    diff = score.get("difficulty", "easy")
+                    if diff in difficulty_order:
+                        diff_idx = difficulty_order.index(diff)
+                        if diff_idx > stats["max_difficulty_passed"]:
+                            stats["max_difficulty_passed"] = diff_idx
+            
+            # Insert calculated progress records
+            for cat, stats in category_stats.items():
+                # unlocked_level = max_difficulty_passed + 1 (they passed level X, so X+1 is their current max)
+                unlocked = stats["max_difficulty_passed"] + 1 if stats["max_difficulty_passed"] >= 0 else 0
+                
+                progress_data = {
+                    "user_id": user_id,
+                    "category": cat,
+                    "unlocked_level": unlocked,
+                    "total_games": stats["total_games"],
+                    "total_score": stats["total_score"],
+                    "total_correct": stats["total_correct"],
+                    "total_errors": stats["total_errors"]
+                }
+                supabase.table("user_category_progress").upsert(progress_data, on_conflict="user_id, category").execute()
+            
+            # Re-fetch after migration
+            res = supabase.table("user_category_progress").select("*").eq("user_id", user_id).execute()
+    
     return res.data
 
 from .models import CategoryLevelUpdate

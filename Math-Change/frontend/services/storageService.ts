@@ -51,11 +51,10 @@ export const saveScore = async (record: ScoreRecord): Promise<void> => {
 export const getTopScoresByUser = async (username: string): Promise<ScoreRecord[]> => {
   try {
     const scores = await apiRequest<ScoreRecord[]>(`/scores?user=${encodeURIComponent(username)}`);
-    return scores
-      .sort((a, b) => b.score - a.score)
-      .slice(0, 5);
+    // Return all scores sorted by date (newest first)
+    return scores.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   } catch (error) {
-    console.error("Error fetching top scores:", error);
+    console.error("Error fetching scores:", error);
     return [];
   }
 };
