@@ -297,8 +297,8 @@ def delete_scores(scope: str = "all", current_user: dict = Depends(get_current_u
         return {"message": "Historial eliminado correctamente", "count": len(res.data) if res.data else 0}
         
     except Exception as e:
-        print(f"Error deleting scores: {e}")
-        raise HTTPException(status_code=500, detail=f"Error deleting scores: {str(e)}")
+        print(f"Error deleting score {score_id}: {e}")
+        raise HTTPException(status_code=500, detail=f"Error eliminando score: {str(e)}")
 
 @app.delete("/scores/{score_id}")
 def delete_score_by_id(score_id: str, current_user: dict = Depends(get_current_user)):
@@ -325,9 +325,6 @@ def delete_score_by_id(score_id: str, current_user: dict = Depends(get_current_u
     except HTTPException as he:
         raise he
     except Exception as e:
-        print(f"Error deleting score {score_id}: {e}")
-        raise HTTPException(status_code=500, detail=f"Error eliminando score: {str(e)}")
-
 # --- CURRENT USER & AVATAR ---
 
 @app.get("/users/me")
@@ -340,70 +337,57 @@ async def upload_avatar(file: UploadFile = File(...), current_user: dict = Depen
     if not file.content_type.startswith('image/'):
         raise HTTPException(status_code=400, detail="Solo se permiten imágenes")
 
-    # OPTIMIZATION START
     try:
         # Read file content
         content = await file.read()
         image = Image.open(io.BytesIO(content))
         
-        # Convert to RGB (in case of RGBA/P) to allow WebP conversion and consistency
+        # Convert to RGB
         if image.mode in ('RGBA', 'P'):
              image = image.convert('RGB')
              
-        # Resize/Crop to 500x500 (Cover logic)
-        # ImageOps.fit crops the image to the specified aspect ratio and size
+        # Resize/Crop
         image = ImageOps.fit(image, (500, 500), method=Image.Resampling.LANCZOS)
         
         # Save to WebP buffer
         buffer = io.BytesIO()
-        # optimize=True helps reduce size further
         image.save(buffer, format="WEBP", quality=80, optimize=True)
         buffer.seek(0)
         
-        # Update filename extension to .webp
         file_extension = "webp"
         content_type = "image/webp"
         
     except Exception as img_err:
         print(f"Image processing failed: {img_err}")
-        raise HTTPException(status_code=422, detail="Error procesando la imagen. Asegúrese de subir un archivo válido.")
+        raise HTTPException(status_code=422, detail="Error procesando la imagen.")
 
-    # Generate unique filename
     filename = f"{current_user['id']}_{uuid.uuid4()}.{file_extension}"
     
     # DEBUG LOGS
     print(f"DEBUG: Starting upload for user {current_user['id']}")
     print(f"DEBUG: Bucket={S3_BUCKET_NAME}, Endpoint={S3_ENDPOINT_URL}")
-    print(f"DEBUG: Key (first 5 chars)={S3_ACCESS_KEY[:5]}...")
-
-    # Check S3 config before attempting upload
-    if not all([S3_ACCESS_KEY, S3_SECRET_KEY, S3_ENDPOINT_URL, S3_BUCKET_NAME]):
-        raise HTTPException(status_code=503, detail="Configuración S3 incompleta. Contacte al administrador.")
     
-    s3 = boto3.client('s3',
-                      endpoint_url=S3_ENDPOINT_URL,
-                      aws_access_key_id=S3_ACCESS_KEY,
-                      aws_secret_access_key=S3_SECRET_KEY,
-                      region_name=S3_REGION)
-
+    if not all([S3_ACCESS_KEY, S3_SECRET_KEY, S3_ENDPOINT_URL, S3_BUCKET_NAME]):
+        raise HTTPException(status_code=503, detail="Configuración S3 incompleta.")
+    
     try:
-        # Upload - Attempt 1
+        s3 = boto3.client('s3',
+                          endpoint_url=S3_ENDPOINT_URL,
+                          aws_access_key_id=S3_ACCESS_KEY,
+                          aws_secret_access_key=S3_SECRET_KEY,
+                          region_name=S3_REGION)
+
+        # Force ACL public-read if supported by MinIO config
+        # extra_args = {'ACL': 'public-read', 'ContentType': content_type}
+        # S3/MinIO logic: ensure the bucket policy is public or ACL is set. 
+        # We will try setting ContentType at least.
+        
         s3.upload_fileobj(
             buffer,
             S3_BUCKET_NAME,
             filename,
-            ExtraArgs={'ACL': 'public-read', 'ContentType': content_type}
+            ExtraArgs={'ContentType': content_type} # ACL='public-read' sometimes fails if not enabled on bucket
         )
-    except Exception as e:
-        # Check for NoSuchBucket
-        error_str = str(e)
-        if "NoSuchBucket" in error_str or "The specified bucket does not exist" in error_str:
-            print(f"WARN: Bucket {S3_BUCKET_NAME} does not exist. Attempting to create user bucket...")
-            try:
-                # Create Bucket
-                region = os.environ.get("S3_REGION", "us-east-1")
-                if region == "us-east-1":
-                    s3.create_bucket(Bucket=S3_BUCKET_NAME)
                 else:
                     s3.create_bucket(
                         Bucket=S3_BUCKET_NAME,

@@ -1,9 +1,9 @@
 
 import React, { useState, useRef } from 'react';
 import { User, Difficulty } from '../types';
-import { saveUser, uploadAvatar, deleteScores } from '../services/storageService';
+import { saveUser, uploadAvatar } from '../services/storageService';
 import { updateUserEmail, updateUserPassword } from '../services/firebaseAuthService';
-import { ArrowLeft, Camera, Save, Settings, User as UserIcon, Clock, Trash2, ShieldAlert } from 'lucide-react';
+import { ArrowLeft, Camera, Save, Settings, User as UserIcon, Clock, Trash2 } from 'lucide-react';
 
 interface Props {
   user: User;
@@ -247,24 +247,7 @@ const ProfileScreen: React.FC<Props> = ({ user, onUpdateUser, onBack }) => {
             ))}
           </div>
 
-          <div className="flex items-center gap-2 mb-4 mt-8 text-red-300">
-            <ShieldAlert size={20} />
-            <h3 className="font-bold text-lg">Zona de Peligro</h3>
-          </div>
-
-          <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 flex justify-between items-center">
-            <div>
-              <p className="font-medium text-red-200">Historial de Partidas</p>
-              <p className="text-xs text-red-200/50">Elimina todos tus registros de puntuación de forma permanente.</p>
-            </div>
-            <button
-              onClick={handleDeleteHistory}
-              className="flex items-center gap-2 px-3 py-2 bg-red-500/20 hover:bg-red-500 hover:text-white text-red-400 rounded-lg transition-colors border border-red-500/30"
-            >
-              <Trash2 size={16} /> Eliminar
-            </button>
-          </div>
-
+          {/* Danger Zone Removed */}
           <div className="mt-auto pt-6 flex justify-end items-center gap-4">
             {message && <span className="text-green-400 font-medium animate-pulse">{message}</span>}
             <button

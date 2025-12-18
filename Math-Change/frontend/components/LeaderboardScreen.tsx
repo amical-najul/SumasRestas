@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ScoreRecord, CategoryProgress, GameCategory } from '../types';
-import { getTopScoresByUser, getUserProgress } from '../services/storageService';
-import { ArrowLeft, Calendar, Clock, CheckCircle, XCircle, ChevronDown, ChevronUp, Plus, Minus, X, Divide, Hash, Zap, BrainCircuit, Calculator, TrendingUp, Target, Gamepad2 } from 'lucide-react';
+import { getTopScoresByUser, getUserProgress, deleteScoreById } from '../services/storageService';
+import { ArrowLeft, Calendar, CheckCircle, XCircle, ChevronDown, ChevronUp, Plus, Minus, X, Divide, Hash, Zap, BrainCircuit, Calculator, TrendingUp, Target, Gamepad2, Trash2 } from 'lucide-react';
 
 interface Props {
   username: string;
@@ -33,17 +33,28 @@ const ProgressScreen: React.FC<Props> = ({ username, onBack }) => {
   const [progress, setProgress] = useState<CategoryProgress[]>([]);
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
 
+  const fetchData = async () => {
+    const [scoresData, progressData] = await Promise.all([
+      getTopScoresByUser(username),
+      getUserProgress()
+    ]);
+    setScores(scoresData);
+    setProgress(progressData);
+  };
+
   useEffect(() => {
-    const fetchData = async () => {
-      const [scoresData, progressData] = await Promise.all([
-        getTopScoresByUser(username),
-        getUserProgress()
-      ]);
-      setScores(scoresData);
-      setProgress(progressData);
-    };
     fetchData();
   }, [username]);
+
+  const handleDeleteScore = async (scoreId: string) => {
+    if (!window.confirm("¿Eliminar este registro?")) return;
+    try {
+      await deleteScoreById(scoreId);
+      await fetchData(); // Refresh data to see updated stats
+    } catch (e) {
+      alert("Error eliminando: " + e);
+    }
+  };
 
   // Calculate overall stats
   const totalGames = scores.length;
@@ -98,7 +109,7 @@ const ProgressScreen: React.FC<Props> = ({ username, onBack }) => {
       </div>
 
       {/* Category Progress Cards */}
-      <div className="flex-1 overflow-y-auto space-y-3 pr-1">
+      <div className="flex-1 overflow-y-auto space-y-3 pr-1 custom-scrollbar">
         <h3 className="text-xs text-gray-500 uppercase tracking-wider font-semibold mb-2">Progreso por Categoría</h3>
 
         {playedCategories.length === 0 ? (
@@ -113,12 +124,14 @@ const ProgressScreen: React.FC<Props> = ({ username, onBack }) => {
             const catScores = scoresByCategory[catKey] || [];
             const isExpanded = expandedCategory === catKey;
 
-            const catTotalGames = catProgress?.total_games || catScores.length;
-            const catAccuracy = catProgress && catProgress.total_correct + catProgress.total_errors > 0
+            const catTotalGames = catProgress?.total_games ?? catScores.length; // Use stats from DB or fallback
+            // Prioritize DB stats because they are accurate (synced)
+            const catAccuracy = catProgress && (catProgress.total_correct + catProgress.total_errors > 0)
               ? Math.round((catProgress.total_correct / (catProgress.total_correct + catProgress.total_errors)) * 100)
               : catScores.length > 0
                 ? Math.round(catScores.reduce((sum, s) => sum + s.score, 0) / catScores.length)
                 : 0;
+
             const unlockedLevel = catProgress?.unlocked_level ?? 0;
 
             return (
@@ -156,23 +169,32 @@ const ProgressScreen: React.FC<Props> = ({ username, onBack }) => {
                 {isExpanded && catScores.length > 0 && (
                   <div className="border-t border-white/5 p-2 space-y-2 max-h-48 overflow-y-auto bg-black/20">
                     {catScores.slice(0, 10).map(score => (
-                      <div key={score.id} className="flex items-center justify-between text-sm p-2 bg-white/5 rounded-lg">
+                      <div key={score.id} className="flex items-center justify-between text-sm p-2 bg-white/5 rounded-lg group">
                         <div className="flex items-center space-x-2">
                           <span className="px-2 py-0.5 bg-white/10 rounded text-xs text-gray-300">
                             {DIFFICULTY_LABELS[score.difficulty || 'easy'] || score.difficulty}
                           </span>
                           <span className="text-white font-medium">{score.score}%</span>
                         </div>
-                        <div className="flex items-center space-x-3 text-xs text-gray-400">
-                          <span className="flex items-center text-green-400">
-                            <CheckCircle size={12} className="mr-1" />{score.correctCount}
-                          </span>
-                          <span className="flex items-center text-red-400">
-                            <XCircle size={12} className="mr-1" />{score.errorCount}
-                          </span>
-                          <span className="flex items-center">
-                            <Calendar size={12} className="mr-1" />{new Date(score.date).toLocaleDateString()}
-                          </span>
+                        <div className="flex items-center space-x-3">
+                          <div className="flex items-center space-x-2 text-xs text-gray-400">
+                            <span className="flex items-center text-green-400">
+                              <CheckCircle size={12} className="mr-1" />{score.correctCount}
+                            </span>
+                            <span className="flex items-center text-red-400">
+                              <XCircle size={12} className="mr-1" />{score.errorCount}
+                            </span>
+                            <span className="flex items-center">
+                              <Calendar size={12} className="mr-1" />{new Date(score.date).toLocaleDateString()}
+                            </span>
+                          </div>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleDeleteScore(score.id); }}
+                            className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-500/20 text-gray-500 hover:text-red-400 rounded transition-all"
+                            title="Eliminar partida"
+                          >
+                            <Trash2 size={14} />
+                          </button>
                         </div>
                       </div>
                     ))}
